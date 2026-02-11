@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { UserRole, DealStatus } from '@/lib/types';
 import { DEAL_STATUS_CONFIG, ROLE_LABELS } from '@/lib/constants';
 import { formatRelativeTime, formatDuration } from '@/lib/utils';
+import { SubmittedDealsQueue } from '@/components/dashboard/submitted-deals-queue';
 
 // --- Helper: role-specific quick actions ---
 
@@ -35,7 +36,7 @@ function getQuickActions(role: UserRole): QuickAction[] {
       return [
         {
           label: 'Review Queue',
-          href: '/dashboard/deals?status=submitted_to_manager,resubmitted_to_manager',
+          href: '/dashboard/deals?status=pending_manager_review',
           icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
           description: 'Deals awaiting your review',
         },
@@ -50,13 +51,13 @@ function getQuickActions(role: UserRole): QuickAction[] {
       return [
         {
           label: 'Claim Deals',
-          href: '/dashboard/deals?status=sent_to_underwriting',
+          href: '/dashboard/deals?status=submitted_to_underwriting',
           icon: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
           description: 'Unclaimed deals ready for pickup',
         },
         {
           label: 'My Queue',
-          href: '/dashboard/deals?status=underwriting_assigned,underwriting_reviewing',
+          href: '/dashboard/deals?status=submitted_to_underwriting,submitted_to_lender',
           icon: 'M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z',
           description: 'Deals assigned to you',
         },
@@ -97,16 +98,14 @@ function getQuickActions(role: UserRole): QuickAction[] {
 }
 
 // --- Statuses considered "terminal" ---
-const TERMINAL_STATUSES: DealStatus[] = ['completed', 'cancelled'];
+const TERMINAL_STATUSES: DealStatus[] = ['signed_and_delivered', 'cancelled'];
 
 // --- Statuses considered "awaiting action" ---
 const AWAITING_ACTION_STATUSES: DealStatus[] = [
-  'submitted_to_manager',
-  'resubmitted_to_manager',
-  'kicked_back_to_agent',
-  'kicked_back_to_manager',
-  'sent_to_underwriting',
-  'resubmitted_to_underwriting',
+  'pending_manager_review',
+  'submitted_to_underwriting',
+  'kicked_back_to_sales',
+  'submitted_to_lender',
 ];
 
 export default async function DashboardPage() {
@@ -154,7 +153,7 @@ export default async function DashboardPage() {
   let completedQuery = supabase
     .from('deals')
     .select('id', { count: 'exact', head: true })
-    .eq('status', 'completed')
+    .eq('status', 'signed_and_delivered')
     .gte('updated_at', startOfMonth.toISOString());
 
   if (userProfile.role === 'agent') {
@@ -188,6 +187,19 @@ export default async function DashboardPage() {
     .order('changed_at', { ascending: false })
     .limit(5);
 
+  // 6. Submitted deals queue (agent only) — all non-terminal deals for this agent
+  const submittedDealsQuery = userProfile.role === 'agent'
+    ? supabase
+        .from('deals')
+        .select(`
+          *,
+          applicants:deal_applicants(first_name, last_name, applicant_number, experian_score)
+        `)
+        .eq('submitted_by', authUser.id)
+        .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
+        .order('created_at', { ascending: false })
+    : null;
+
   // Run all queries in parallel
   const [
     activeDealsResult,
@@ -195,12 +207,14 @@ export default async function DashboardPage() {
     completedResult,
     avgTimeResult,
     activityResult,
+    submittedDealsResult,
   ] = await Promise.all([
     activeDealsQuery,
     awaitingQuery,
     completedQuery,
     avgTimeQuery,
     activityQuery,
+    submittedDealsQuery ?? Promise.resolve({ data: null }),
   ]);
 
   const totalActiveDeals = activeDealsResult.count ?? 0;
@@ -219,6 +233,7 @@ export default async function DashboardPage() {
   }
 
   const recentActivity = activityResult.data ?? [];
+  const submittedDeals = submittedDealsResult.data ?? [];
 
   // Quick actions for this role
   const quickActions = getQuickActions(userProfile.role as UserRole);
@@ -239,6 +254,11 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {/* Submitted Deals Queue (agent only) */}
+      {userProfile.role === 'agent' && submittedDeals.length > 0 && (
+        <SubmittedDealsQueue deals={submittedDeals} />
+      )}
+
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Active Deals */}
@@ -254,7 +274,7 @@ export default async function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-xs text-surface-400 mt-3">Excludes completed and cancelled</p>
+          <p className="text-xs text-surface-400 mt-3">Excludes delivered and cancelled</p>
         </div>
 
         {/* Awaiting Action */}
@@ -295,7 +315,7 @@ export default async function DashboardPage() {
         <div className="card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-surface-500">Completed This Month</p>
+              <p className="text-sm font-medium text-surface-500">Delivered This Month</p>
               <p className="text-3xl font-bold text-surface-900 mt-1">{completedThisMonth}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
@@ -365,9 +385,9 @@ export default async function DashboardPage() {
                     {/* Status dot */}
                     <div className="mt-1.5 flex-shrink-0">
                       <div className={`w-2.5 h-2.5 rounded-full ${toConfig?.bgColor ?? 'bg-surface-200'}`} style={{
-                        backgroundColor: entry.to_status === 'completed' ? 'rgb(34 197 94)' :
+                        backgroundColor: entry.to_status === 'signed_and_delivered' || entry.to_status === 'approved' ? 'rgb(34 197 94)' :
                           entry.to_status === 'cancelled' ? 'rgb(156 163 175)' :
-                          entry.to_status?.includes('kicked_back') ? 'rgb(245 158 11)' :
+                          entry.to_status === 'kicked_back_to_sales' ? 'rgb(245 158 11)' :
                           'rgb(59 130 246)',
                       }} />
                     </div>

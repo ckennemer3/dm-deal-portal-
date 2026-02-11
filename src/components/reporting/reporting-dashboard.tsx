@@ -37,7 +37,7 @@ export function ReportingDashboard({ deals, offices, teams, agents }: ReportingD
 
   // Compute metrics
   const totalDeals = filteredDeals.length;
-  const completedDeals = filteredDeals.filter((d: any) => d.status === 'completed').length;
+  const completedDeals = filteredDeals.filter((d: any) => d.status === 'signed_and_delivered').length;
   const cancelledDeals = filteredDeals.filter((d: any) => d.status === 'cancelled').length;
   const activeDeals = totalDeals - completedDeals - cancelledDeals;
 
@@ -54,13 +54,13 @@ export function ReportingDashboard({ deals, offices, teams, agents }: ReportingD
   });
 
   // Avg lifecycle (for completed deals)
-  const completedWithHistory = filteredDeals.filter((d: any) => d.status === 'completed');
+  const completedWithHistory = filteredDeals.filter((d: any) => d.status === 'signed_and_delivered');
   let avgLifecycleHours = 0;
   if (completedWithHistory.length > 0) {
     const totalMs = completedWithHistory.reduce((sum: number, d: any) => {
       const created = new Date(d.created_at).getTime();
       const completed = d.status_history
-        ?.filter((h: any) => h.to_status === 'completed')
+        ?.filter((h: any) => h.to_status === 'signed_and_delivered')
         .sort((a: any, b: any) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())[0];
       if (completed) {
         return sum + (new Date(completed.changed_at).getTime() - created);
@@ -72,7 +72,7 @@ export function ReportingDashboard({ deals, offices, teams, agents }: ReportingD
 
   // Kickback metrics
   const dealsWithKickbacks = filteredDeals.filter((d: any) =>
-    d.status_history?.some((h: any) => h.to_status === 'kicked_back_to_agent' || h.to_status === 'kicked_back_to_manager')
+    d.status_history?.some((h: any) => h.to_status === 'kicked_back_to_sales')
   );
   const kickbackRate = totalDeals > 0 ? (dealsWithKickbacks.length / totalDeals * 100) : 0;
 

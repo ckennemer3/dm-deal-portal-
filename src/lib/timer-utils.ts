@@ -8,25 +8,22 @@ import { DEFAULT_TIMER_CONFIG } from './constants';
  */
 export function getTimerThresholdForStatus(status: DealStatus): TimerThreshold {
   switch (status) {
-    case 'submitted_to_manager':
-    case 'manager_reviewing':
-    case 'resubmitted_to_manager':
-    case 'kicked_back_to_manager':
+    case 'pending_manager_review':
       return DEFAULT_TIMER_CONFIG.manager_review;
 
-    case 'kicked_back_to_agent':
+    case 'kicked_back_to_sales':
       return DEFAULT_TIMER_CONFIG.agent_response;
 
-    case 'sent_to_underwriting':
+    case 'submitted_to_underwriting':
       return DEFAULT_TIMER_CONFIG.underwriter_pickup;
 
-    case 'underwriting_assigned':
-    case 'underwriting_reviewing':
-    case 'resubmitted_to_underwriting':
+    case 'submitted_to_lender':
       return DEFAULT_TIMER_CONFIG.underwriter_review;
 
-    // Terminal statuses — fall back to a generous default
-    case 'completed':
+    // Pending, approved, terminal statuses — generous default
+    case 'pending':
+    case 'approved':
+    case 'signed_and_delivered':
     case 'cancelled':
     default:
       return { green_max_hours: 4, yellow_max_hours: 8 };

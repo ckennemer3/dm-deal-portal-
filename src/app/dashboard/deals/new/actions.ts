@@ -39,7 +39,7 @@ export async function submitDeal(formData: DealFormData) {
     .from('deals')
     .insert({
       deal_type: formData.deal_type,
-      status: 'submitted_to_manager',
+      status: 'pending_manager_review',
       submitted_by: authUser.id,
       assigned_manager: managerId,
       num_applicants: formData.num_applicants,
@@ -115,7 +115,7 @@ export async function submitDeal(formData: DealFormData) {
   await supabase.from('deal_status_history').insert({
     deal_id: deal.id,
     from_status: null,
-    to_status: 'submitted_to_manager',
+    to_status: 'pending_manager_review',
     changed_by: authUser.id,
   });
 

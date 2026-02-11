@@ -53,14 +53,9 @@ export function canEditDealFields(user: User, deal: Deal): boolean {
   switch (user.role) {
     case 'agent':
       return deal.submitted_by === user.id &&
-        (deal.status === 'kicked_back_to_agent');
+        (deal.status === 'kicked_back_to_sales' || deal.status === 'pending');
     case 'manager':
-      return [
-        'submitted_to_manager',
-        'manager_reviewing',
-        'kicked_back_to_manager',
-        'resubmitted_to_manager',
-      ].includes(deal.status);
+      return deal.status === 'pending_manager_review';
     case 'administrator':
       return true;
     default:
@@ -162,7 +157,7 @@ export function canResolveActionRequired(user: User, deal: Deal): boolean {
 export function canClaimDeal(user: User, deal: Deal): boolean {
   return (
     user.role === 'underwriter' &&
-    deal.status === 'sent_to_underwriting' &&
+    deal.status === 'submitted_to_underwriting' &&
     deal.assigned_underwriter === null
   );
 }
@@ -174,26 +169,19 @@ export function canReassignDeal(user: User): boolean {
 // === Manager Actions ===
 
 export function canApproveAndForward(user: User, deal: Deal): boolean {
-  const validStatuses: DealStatus[] = [
-    'submitted_to_manager',
-    'manager_reviewing',
-    'resubmitted_to_manager',
-  ];
   return (
     (user.role === 'manager' || user.role === 'administrator') &&
-    validStatuses.includes(deal.status)
+    deal.status === 'pending_manager_review'
   );
 }
 
-export function canKickBackToAgent(user: User, deal: Deal): boolean {
-  const validStatuses: DealStatus[] = [
-    'submitted_to_manager',
-    'manager_reviewing',
-    'kicked_back_to_manager',
-    'resubmitted_to_manager',
-  ];
-  return (
-    (user.role === 'manager' || user.role === 'administrator') &&
-    validStatuses.includes(deal.status)
-  );
+export function canKickBackToSales(user: User, deal: Deal): boolean {
+  // Manager can kick back when reviewing; UW can kick back from underwriting or lender stages
+  if (user.role === 'manager' || user.role === 'administrator') {
+    return deal.status === 'pending_manager_review';
+  }
+  if (user.role === 'underwriter') {
+    return deal.status === 'submitted_to_underwriting' || deal.status === 'submitted_to_lender';
+  }
+  return false;
 }

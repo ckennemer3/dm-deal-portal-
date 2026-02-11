@@ -41,16 +41,13 @@ export interface Team {
 export type DealType = 'lease' | 'retail_purchase' | 're_lease' | 'lease_buyout';
 
 export type DealStatus =
-  | 'submitted_to_manager'
-  | 'manager_reviewing'
-  | 'sent_to_underwriting'
-  | 'underwriting_assigned'
-  | 'underwriting_reviewing'
-  | 'kicked_back_to_manager'
-  | 'kicked_back_to_agent'
-  | 'resubmitted_to_manager'
-  | 'resubmitted_to_underwriting'
-  | 'completed'
+  | 'pending'
+  | 'pending_manager_review'
+  | 'submitted_to_underwriting'
+  | 'kicked_back_to_sales'
+  | 'submitted_to_lender'
+  | 'approved'
+  | 'signed_and_delivered'
   | 'cancelled';
 
 export type VehicleCondition = 'new' | 'used' | 'untitled_demo';

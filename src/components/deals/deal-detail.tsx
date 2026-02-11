@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getFullName } from '@/lib/utils';
-import { canEditDealFields, canApproveAndForward, canKickBackToAgent, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired } from '@/lib/permissions';
+import { canEditDealFields, canApproveAndForward, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired } from '@/lib/permissions';
 import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
@@ -217,7 +217,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const clientName = primaryApplicant ? getFullName(primaryApplicant.first_name, primaryApplicant.last_name) : 'Unknown';
   const vehicleSummary = `${deal.vehicle_year} ${deal.vehicle_make} ${deal.vehicle_model} ${deal.vehicle_trim}`;
 
-  const isActiveDeal = deal.status !== 'completed' && deal.status !== 'cancelled';
+  const isActiveDeal = deal.status !== 'signed_and_delivered' && deal.status !== 'cancelled';
   const canEdit = canEditDealFields(user, deal);
 
   // Use the most recent status history entry timestamp, or fall back to updated_at / created_at
@@ -229,10 +229,9 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
 
   // ---- Determine if the deal has been sent to underwriting (for history logging threshold) ----
   const POST_UNDERWRITING_STATUSES: DealStatus[] = [
-    'sent_to_underwriting', 'underwriting_assigned', 'underwriting_reviewing',
-    'kicked_back_to_manager', 'kicked_back_to_agent',
-    'resubmitted_to_manager', 'resubmitted_to_underwriting',
-    'completed', 'cancelled',
+    'submitted_to_underwriting', 'kicked_back_to_sales',
+    'submitted_to_lender', 'approved',
+    'signed_and_delivered', 'cancelled',
   ];
   // We consider the deal "post-underwriting" if it has ever been sent to underwriting
   const hasBeenSentToUnderwriting = deal.status_history?.some(
@@ -273,7 +272,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
       for (const change of deal.field_changes) {
         // Determine if this change happened after the deal was first sent to underwriting
         const firstUnderwritingSend = deal.status_history
-          ?.filter((h: any) => h.to_status === 'sent_to_underwriting')
+          ?.filter((h: any) => h.to_status === 'submitted_to_underwriting')
           ?.sort((a: any, b: any) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime())?.[0];
 
         const showChange = firstUnderwritingSend
@@ -310,17 +309,16 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const handleApproveForward = async () => {
     setLoading(true);
     try {
-      await updateDealStatus(deal.id, 'sent_to_underwriting', 'Approved and forwarded to underwriting');
+      await updateDealStatus(deal.id, 'submitted_to_underwriting', 'Approved and forwarded to underwriting');
       router.refresh();
     } finally { setLoading(false); }
   };
 
-  const handleKickback = async (target: 'agent' | 'manager') => {
+  const handleKickback = async () => {
     if (!kickbackMessage.trim()) return;
     setLoading(true);
     try {
-      const status: DealStatus = target === 'agent' ? 'kicked_back_to_agent' : 'kicked_back_to_manager';
-      await updateDealStatus(deal.id, status, kickbackMessage);
+      await updateDealStatus(deal.id, 'kicked_back_to_sales', kickbackMessage);
       await sendMessage(deal.id, kickbackMessage, 'action_required');
       setShowKickbackModal(false);
       setKickbackMessage('');
@@ -349,7 +347,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const handleComplete = async () => {
     setLoading(true);
     try {
-      await updateDealStatus(deal.id, 'completed', 'Deal completed');
+      await updateDealStatus(deal.id, 'signed_and_delivered', 'Deal signed and delivered');
       router.refresh();
     } finally { setLoading(false); }
   };
@@ -357,10 +355,23 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const handleResubmit = async () => {
     setLoading(true);
     try {
-      const newStatus: DealStatus = deal.status === 'kicked_back_to_agent' ? 'resubmitted_to_manager'
-        : deal.status === 'kicked_back_to_manager' ? 'resubmitted_to_underwriting'
-        : 'sent_to_underwriting';
-      await updateDealStatus(deal.id, newStatus, 'Resubmitted');
+      await updateDealStatus(deal.id, 'pending_manager_review', 'Resubmitted to manager');
+      router.refresh();
+    } finally { setLoading(false); }
+  };
+
+  const handleSubmitToLender = async () => {
+    setLoading(true);
+    try {
+      await updateDealStatus(deal.id, 'submitted_to_lender', 'Submitted to lender');
+      router.refresh();
+    } finally { setLoading(false); }
+  };
+
+  const handleMarkApproved = async () => {
+    setLoading(true);
+    try {
+      await updateDealStatus(deal.id, 'approved', 'Deal approved by lender');
       router.refresh();
     } finally { setLoading(false); }
   };
@@ -427,29 +438,31 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
           {canApproveAndForward(user, deal) && (
             <Button onClick={handleApproveForward} loading={loading}>Approve & Send to Underwriting</Button>
           )}
-          {canKickBackToAgent(user, deal) && (
-            <Button variant="secondary" onClick={() => setShowKickbackModal(true)}>Kick Back to Agent</Button>
+          {canKickBackToSales(user, deal) && (
+            <Button variant="secondary" onClick={() => setShowKickbackModal(true)}>Kick Back to Sales</Button>
           )}
-          {user.role === 'underwriter' && deal.status === 'kicked_back_to_manager' && null}
           {canClaimDeal(user, deal) && (
             <Button onClick={handleClaim} loading={loading}>Accept Deal</Button>
           )}
+          {/* Underwriter actions when assigned */}
           {user.role === 'underwriter' && deal.assigned_underwriter === user.id && (
             <>
-              {['underwriting_assigned', 'underwriting_reviewing', 'resubmitted_to_underwriting'].includes(deal.status) && (
-                <Button variant="secondary" onClick={() => setShowKickbackModal(true)}>Kick Back to Manager</Button>
+              {deal.status === 'submitted_to_underwriting' && (
+                <Button onClick={handleSubmitToLender} loading={loading}>Submit to Lender</Button>
               )}
-              {['underwriting_reviewing', 'resubmitted_to_underwriting'].includes(deal.status) && (
-                <Button onClick={handleComplete} loading={loading}>Mark Complete</Button>
+              {deal.status === 'submitted_to_lender' && (
+                <Button onClick={handleMarkApproved} loading={loading}>Mark Approved</Button>
               )}
               <Button variant="ghost" onClick={() => setShowReassignModal(true)}>Reassign</Button>
             </>
           )}
-          {user.role === 'agent' && deal.status === 'kicked_back_to_agent' && (
-            <Button onClick={handleResubmit} loading={loading}>Resubmit to Manager</Button>
+          {/* Manager/UW can mark approved deals as signed & delivered */}
+          {(user.role === 'manager' || user.role === 'underwriter' || user.role === 'administrator') && deal.status === 'approved' && (
+            <Button onClick={handleComplete} loading={loading}>Mark Signed & Delivered</Button>
           )}
-          {user.role === 'manager' && deal.status === 'kicked_back_to_manager' && (
-            <Button onClick={handleResubmit} loading={loading}>Resubmit to Underwriting</Button>
+          {/* Agent resubmit from kickback */}
+          {user.role === 'agent' && deal.status === 'kicked_back_to_sales' && (
+            <Button onClick={handleResubmit} loading={loading}>Resubmit to Manager</Button>
           )}
         </div>
       </div>
@@ -722,7 +735,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
         footer={
           <>
             <Button variant="secondary" onClick={() => setShowKickbackModal(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleKickback(user.role === 'underwriter' ? 'manager' : 'agent')} loading={loading}>
+            <Button variant="danger" onClick={() => handleKickback()} loading={loading}>
               Send Kickback
             </Button>
           </>

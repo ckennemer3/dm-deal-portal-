@@ -138,7 +138,7 @@ describe('updateDealStatusSchema', () => {
   it('accepts valid status change', () => {
     const result = updateDealStatusSchema.safeParse({
       dealId: '550e8400-e29b-41d4-a716-446655440000',
-      newStatus: 'manager_reviewing',
+      newStatus: 'pending_manager_review',
     });
     expect(result.success).toBe(true);
   });
@@ -146,7 +146,7 @@ describe('updateDealStatusSchema', () => {
   it('rejects non-UUID dealId', () => {
     const result = updateDealStatusSchema.safeParse({
       dealId: 'not-a-uuid',
-      newStatus: 'manager_reviewing',
+      newStatus: 'pending_manager_review',
     });
     expect(result.success).toBe(false);
   });
@@ -161,16 +161,13 @@ describe('updateDealStatusSchema', () => {
 
   it('accepts all valid status values', () => {
     const validStatuses = [
-      'submitted_to_manager',
-      'manager_reviewing',
-      'sent_to_underwriting',
-      'underwriting_assigned',
-      'underwriting_reviewing',
-      'kicked_back_to_manager',
-      'kicked_back_to_agent',
-      'resubmitted_to_manager',
-      'resubmitted_to_underwriting',
-      'completed',
+      'pending',
+      'pending_manager_review',
+      'submitted_to_underwriting',
+      'kicked_back_to_sales',
+      'submitted_to_lender',
+      'approved',
+      'signed_and_delivered',
       'cancelled',
     ];
     for (const newStatus of validStatuses) {
@@ -185,7 +182,7 @@ describe('updateDealStatusSchema', () => {
   it('accepts optional notes', () => {
     const result = updateDealStatusSchema.safeParse({
       dealId: '550e8400-e29b-41d4-a716-446655440000',
-      newStatus: 'manager_reviewing',
+      newStatus: 'pending_manager_review',
       notes: 'Approved with conditions',
     });
     expect(result.success).toBe(true);
@@ -333,8 +330,8 @@ describe('updateDealFieldSchema', () => {
     const result = updateDealFieldSchema.safeParse({
       dealId: '550e8400-e29b-41d4-a716-446655440000',
       fieldName: 'status',
-      oldValue: 'submitted_to_manager',
-      newValue: 'completed',
+      oldValue: 'pending',
+      newValue: 'signed_and_delivered',
     });
     expect(result.success).toBe(false);
   });

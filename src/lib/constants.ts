@@ -19,16 +19,13 @@ export const DEAL_TYPE_LABELS: Record<DealType, string> = {
 
 // === Deal Status Labels & Colors ===
 export const DEAL_STATUS_CONFIG: Record<DealStatus, { label: string; color: string; bgColor: string }> = {
-  submitted_to_manager: { label: 'Submitted to Manager', color: 'text-brand-800', bgColor: 'bg-brand-100' },
-  manager_reviewing: { label: 'Manager Reviewing', color: 'text-brand-800', bgColor: 'bg-brand-100' },
-  sent_to_underwriting: { label: 'Sent to Underwriting', color: 'text-purple-800', bgColor: 'bg-purple-100' },
-  underwriting_assigned: { label: 'Underwriting Assigned', color: 'text-purple-800', bgColor: 'bg-purple-100' },
-  underwriting_reviewing: { label: 'Underwriting Reviewing', color: 'text-purple-800', bgColor: 'bg-purple-100' },
-  kicked_back_to_manager: { label: 'Kicked Back to Manager', color: 'text-amber-900', bgColor: 'bg-amber-100' },
-  kicked_back_to_agent: { label: 'Kicked Back to Agent', color: 'text-amber-900', bgColor: 'bg-amber-100' },
-  resubmitted_to_manager: { label: 'Resubmitted to Manager', color: 'text-brand-800', bgColor: 'bg-brand-100' },
-  resubmitted_to_underwriting: { label: 'Resubmitted to Underwriting', color: 'text-purple-800', bgColor: 'bg-purple-100' },
-  completed: { label: 'Completed', color: 'text-emerald-900', bgColor: 'bg-emerald-100' },
+  pending: { label: 'Pending', color: 'text-surface-600', bgColor: 'bg-surface-200' },
+  pending_manager_review: { label: 'Pending Manager Review', color: 'text-brand-800', bgColor: 'bg-brand-100' },
+  submitted_to_underwriting: { label: 'Submitted to Underwriting', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  kicked_back_to_sales: { label: 'Kicked Back to Sales', color: 'text-amber-900', bgColor: 'bg-amber-100' },
+  submitted_to_lender: { label: 'Submitted to Lender', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  approved: { label: 'Approved', color: 'text-emerald-900', bgColor: 'bg-emerald-100' },
+  signed_and_delivered: { label: 'Signed & Delivered', color: 'text-emerald-900', bgColor: 'bg-emerald-100' },
   cancelled: { label: 'Cancelled', color: 'text-surface-600', bgColor: 'bg-surface-200' },
 };
 
@@ -86,43 +83,31 @@ export const OFFICES = [
 
 // === Status Transitions (who can make which transitions) ===
 export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles: UserRole[] }> = {
-  submitted_to_manager: {
-    next: ['manager_reviewing'],
-    roles: ['manager', 'administrator'],
-  },
-  manager_reviewing: {
-    next: ['sent_to_underwriting', 'kicked_back_to_agent', 'cancelled'],
-    roles: ['manager', 'administrator'],
-  },
-  sent_to_underwriting: {
-    next: ['underwriting_assigned'],
-    roles: ['underwriter', 'administrator'],
-  },
-  underwriting_assigned: {
-    next: ['underwriting_reviewing'],
-    roles: ['underwriter', 'administrator'],
-  },
-  underwriting_reviewing: {
-    next: ['kicked_back_to_manager', 'completed'],
-    roles: ['underwriter', 'administrator'],
-  },
-  kicked_back_to_manager: {
-    next: ['kicked_back_to_agent', 'resubmitted_to_underwriting', 'cancelled'],
-    roles: ['manager', 'administrator'],
-  },
-  kicked_back_to_agent: {
-    next: ['resubmitted_to_manager'],
+  pending: {
+    next: ['pending_manager_review'],
     roles: ['agent', 'administrator'],
   },
-  resubmitted_to_manager: {
-    next: ['sent_to_underwriting', 'kicked_back_to_agent', 'resubmitted_to_underwriting', 'cancelled'],
+  pending_manager_review: {
+    next: ['submitted_to_underwriting', 'kicked_back_to_sales', 'cancelled'],
     roles: ['manager', 'administrator'],
   },
-  resubmitted_to_underwriting: {
-    next: ['underwriting_reviewing', 'kicked_back_to_manager', 'completed'],
+  submitted_to_underwriting: {
+    next: ['submitted_to_lender', 'kicked_back_to_sales', 'cancelled'],
     roles: ['underwriter', 'administrator'],
   },
-  completed: {
+  kicked_back_to_sales: {
+    next: ['pending_manager_review', 'cancelled'],
+    roles: ['agent', 'administrator'],
+  },
+  submitted_to_lender: {
+    next: ['approved', 'kicked_back_to_sales', 'cancelled'],
+    roles: ['underwriter', 'administrator'],
+  },
+  approved: {
+    next: ['signed_and_delivered', 'cancelled'],
+    roles: ['manager', 'underwriter', 'administrator'],
+  },
+  signed_and_delivered: {
     next: [],
     roles: [],
   },

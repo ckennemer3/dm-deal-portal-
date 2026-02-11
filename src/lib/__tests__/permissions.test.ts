@@ -14,7 +14,7 @@ import {
   canSendActionRequired,
   canClaimDeal,
   canApproveAndForward,
-  canKickBackToAgent,
+  canKickBackToSales,
 } from '../permissions';
 import type { User, Deal, DealStatus, UserRole } from '@/lib/types';
 
@@ -44,7 +44,7 @@ const mockDeal: Deal = {
   id: 'deal-1',
   deal_number: 'DM-2026-00001',
   deal_type: 'lease',
-  status: 'submitted_to_manager',
+  status: 'pending_manager_review',
   submitted_by: 'agent-1',
   assigned_manager: 'manager-1',
   assigned_underwriter: null,
@@ -86,54 +86,6 @@ describe('hasMinimumRole', () => {
     expect(hasMinimumRole('agent', 'manager')).toBe(false);
   });
 
-  it('agent does NOT have minimum role of underwriter', () => {
-    expect(hasMinimumRole('agent', 'underwriter')).toBe(false);
-  });
-
-  it('agent does NOT have minimum role of executive', () => {
-    expect(hasMinimumRole('agent', 'executive')).toBe(false);
-  });
-
-  it('agent does NOT have minimum role of administrator', () => {
-    expect(hasMinimumRole('agent', 'administrator')).toBe(false);
-  });
-
-  it('manager has minimum role of agent', () => {
-    expect(hasMinimumRole('manager', 'agent')).toBe(true);
-  });
-
-  it('manager has minimum role of manager', () => {
-    expect(hasMinimumRole('manager', 'manager')).toBe(true);
-  });
-
-  it('manager does NOT have minimum role of underwriter', () => {
-    expect(hasMinimumRole('manager', 'underwriter')).toBe(false);
-  });
-
-  it('underwriter has minimum role of agent', () => {
-    expect(hasMinimumRole('underwriter', 'agent')).toBe(true);
-  });
-
-  it('underwriter has minimum role of manager', () => {
-    expect(hasMinimumRole('underwriter', 'manager')).toBe(true);
-  });
-
-  it('underwriter has minimum role of underwriter', () => {
-    expect(hasMinimumRole('underwriter', 'underwriter')).toBe(true);
-  });
-
-  it('underwriter does NOT have minimum role of executive', () => {
-    expect(hasMinimumRole('underwriter', 'executive')).toBe(false);
-  });
-
-  it('executive has minimum role of all except administrator', () => {
-    expect(hasMinimumRole('executive', 'agent')).toBe(true);
-    expect(hasMinimumRole('executive', 'manager')).toBe(true);
-    expect(hasMinimumRole('executive', 'underwriter')).toBe(true);
-    expect(hasMinimumRole('executive', 'executive')).toBe(true);
-    expect(hasMinimumRole('executive', 'administrator')).toBe(false);
-  });
-
   it('administrator has minimum role of every role', () => {
     for (const role of roles) {
       expect(hasMinimumRole('administrator', role)).toBe(true);
@@ -148,19 +100,10 @@ describe('canAccessAdminPanel', () => {
     expect(canAccessAdminPanel('administrator')).toBe(true);
   });
 
-  it('returns false for agent', () => {
+  it('returns false for non-admin roles', () => {
     expect(canAccessAdminPanel('agent')).toBe(false);
-  });
-
-  it('returns false for manager', () => {
     expect(canAccessAdminPanel('manager')).toBe(false);
-  });
-
-  it('returns false for underwriter', () => {
     expect(canAccessAdminPanel('underwriter')).toBe(false);
-  });
-
-  it('returns false for executive', () => {
     expect(canAccessAdminPanel('executive')).toBe(false);
   });
 });
@@ -168,23 +111,14 @@ describe('canAccessAdminPanel', () => {
 // === canAccessReporting ===
 
 describe('canAccessReporting', () => {
-  it('returns true for executive', () => {
+  it('returns true for executive and administrator', () => {
     expect(canAccessReporting('executive')).toBe(true);
-  });
-
-  it('returns true for administrator', () => {
     expect(canAccessReporting('administrator')).toBe(true);
   });
 
-  it('returns false for agent', () => {
+  it('returns false for other roles', () => {
     expect(canAccessReporting('agent')).toBe(false);
-  });
-
-  it('returns false for manager', () => {
     expect(canAccessReporting('manager')).toBe(false);
-  });
-
-  it('returns false for underwriter', () => {
     expect(canAccessReporting('underwriter')).toBe(false);
   });
 });
@@ -192,23 +126,14 @@ describe('canAccessReporting', () => {
 // === canSubmitDeals ===
 
 describe('canSubmitDeals', () => {
-  it('returns true for agent', () => {
+  it('returns true for agent and administrator', () => {
     expect(canSubmitDeals('agent')).toBe(true);
-  });
-
-  it('returns true for administrator', () => {
     expect(canSubmitDeals('administrator')).toBe(true);
   });
 
-  it('returns false for manager', () => {
+  it('returns false for other roles', () => {
     expect(canSubmitDeals('manager')).toBe(false);
-  });
-
-  it('returns false for underwriter', () => {
     expect(canSubmitDeals('underwriter')).toBe(false);
-  });
-
-  it('returns false for executive', () => {
     expect(canSubmitDeals('executive')).toBe(false);
   });
 });
@@ -225,19 +150,10 @@ describe('canViewDeal', () => {
     expect(canViewDeal(mockAgent, otherAgentDeal)).toBe(false);
   });
 
-  it('manager can view any deal', () => {
+  it('manager, underwriter, executive, admin can view any deal', () => {
     expect(canViewDeal(mockManager, mockDeal)).toBe(true);
-  });
-
-  it('underwriter can view any deal', () => {
     expect(canViewDeal(mockUnderwriter, mockDeal)).toBe(true);
-  });
-
-  it('executive can view any deal', () => {
     expect(canViewDeal(mockExecutive, mockDeal)).toBe(true);
-  });
-
-  it('administrator can view any deal', () => {
     expect(canViewDeal(mockAdmin, mockDeal)).toBe(true);
   });
 });
@@ -246,12 +162,17 @@ describe('canViewDeal', () => {
 
 describe('canEditDealFields', () => {
   describe('agent', () => {
-    it('can edit own deal when kicked_back_to_agent', () => {
-      const kickedDeal = { ...mockDeal, status: 'kicked_back_to_agent' as DealStatus };
+    it('can edit own deal when kicked_back_to_sales', () => {
+      const kickedDeal = { ...mockDeal, status: 'kicked_back_to_sales' as DealStatus };
       expect(canEditDealFields(mockAgent, kickedDeal)).toBe(true);
     });
 
-    it('cannot edit own deal in submitted_to_manager status', () => {
+    it('can edit own deal when pending', () => {
+      const pendingDeal = { ...mockDeal, status: 'pending' as DealStatus };
+      expect(canEditDealFields(mockAgent, pendingDeal)).toBe(true);
+    });
+
+    it('cannot edit own deal in pending_manager_review status', () => {
       expect(canEditDealFields(mockAgent, mockDeal)).toBe(false);
     });
 
@@ -259,39 +180,24 @@ describe('canEditDealFields', () => {
       const otherKickedDeal = {
         ...mockDeal,
         submitted_by: 'agent-2',
-        status: 'kicked_back_to_agent' as DealStatus,
+        status: 'kicked_back_to_sales' as DealStatus,
       };
       expect(canEditDealFields(mockAgent, otherKickedDeal)).toBe(false);
     });
   });
 
   describe('manager', () => {
-    it('can edit deal in submitted_to_manager', () => {
+    it('can edit deal in pending_manager_review', () => {
       expect(canEditDealFields(mockManager, mockDeal)).toBe(true);
     });
 
-    it('can edit deal in manager_reviewing', () => {
-      const reviewingDeal = { ...mockDeal, status: 'manager_reviewing' as DealStatus };
-      expect(canEditDealFields(mockManager, reviewingDeal)).toBe(true);
-    });
-
-    it('can edit deal in kicked_back_to_manager', () => {
-      const kickedDeal = { ...mockDeal, status: 'kicked_back_to_manager' as DealStatus };
-      expect(canEditDealFields(mockManager, kickedDeal)).toBe(true);
-    });
-
-    it('can edit deal in resubmitted_to_manager', () => {
-      const resubDeal = { ...mockDeal, status: 'resubmitted_to_manager' as DealStatus };
-      expect(canEditDealFields(mockManager, resubDeal)).toBe(true);
-    });
-
-    it('cannot edit deal in sent_to_underwriting', () => {
-      const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus };
+    it('cannot edit deal in submitted_to_underwriting', () => {
+      const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
       expect(canEditDealFields(mockManager, uwDeal)).toBe(false);
     });
 
-    it('cannot edit deal in completed status', () => {
-      const completedDeal = { ...mockDeal, status: 'completed' as DealStatus };
+    it('cannot edit deal in signed_and_delivered status', () => {
+      const completedDeal = { ...mockDeal, status: 'signed_and_delivered' as DealStatus };
       expect(canEditDealFields(mockManager, completedDeal)).toBe(false);
     });
   });
@@ -299,16 +205,13 @@ describe('canEditDealFields', () => {
   describe('administrator', () => {
     it('can always edit deal fields regardless of status', () => {
       const statuses: DealStatus[] = [
-        'submitted_to_manager',
-        'manager_reviewing',
-        'sent_to_underwriting',
-        'underwriting_assigned',
-        'underwriting_reviewing',
-        'kicked_back_to_manager',
-        'kicked_back_to_agent',
-        'resubmitted_to_manager',
-        'resubmitted_to_underwriting',
-        'completed',
+        'pending',
+        'pending_manager_review',
+        'submitted_to_underwriting',
+        'kicked_back_to_sales',
+        'submitted_to_lender',
+        'approved',
+        'signed_and_delivered',
         'cancelled',
       ];
       for (const status of statuses) {
@@ -334,140 +237,121 @@ describe('canEditDealFields', () => {
 // === canTransitionStatus ===
 
 describe('canTransitionStatus', () => {
-  it('manager can transition submitted_to_manager -> manager_reviewing', () => {
-    expect(canTransitionStatus('manager', 'submitted_to_manager', 'manager_reviewing')).toBe(true);
+  it('agent can transition pending -> pending_manager_review', () => {
+    expect(canTransitionStatus('agent', 'pending', 'pending_manager_review')).toBe(true);
   });
 
-  it('manager can transition manager_reviewing -> sent_to_underwriting', () => {
-    expect(canTransitionStatus('manager', 'manager_reviewing', 'sent_to_underwriting')).toBe(true);
+  it('manager can transition pending_manager_review -> submitted_to_underwriting', () => {
+    expect(canTransitionStatus('manager', 'pending_manager_review', 'submitted_to_underwriting')).toBe(true);
   });
 
-  it('manager can transition manager_reviewing -> kicked_back_to_agent', () => {
-    expect(canTransitionStatus('manager', 'manager_reviewing', 'kicked_back_to_agent')).toBe(true);
+  it('manager can transition pending_manager_review -> kicked_back_to_sales', () => {
+    expect(canTransitionStatus('manager', 'pending_manager_review', 'kicked_back_to_sales')).toBe(true);
   });
 
-  it('manager can transition manager_reviewing -> cancelled', () => {
-    expect(canTransitionStatus('manager', 'manager_reviewing', 'cancelled')).toBe(true);
+  it('manager can transition pending_manager_review -> cancelled', () => {
+    expect(canTransitionStatus('manager', 'pending_manager_review', 'cancelled')).toBe(true);
   });
 
-  it('agent cannot transition submitted_to_manager -> manager_reviewing', () => {
-    expect(canTransitionStatus('agent', 'submitted_to_manager', 'manager_reviewing')).toBe(false);
+  it('agent cannot transition pending_manager_review -> submitted_to_underwriting', () => {
+    expect(canTransitionStatus('agent', 'pending_manager_review', 'submitted_to_underwriting')).toBe(false);
   });
 
-  it('agent can transition kicked_back_to_agent -> resubmitted_to_manager', () => {
-    expect(canTransitionStatus('agent', 'kicked_back_to_agent', 'resubmitted_to_manager')).toBe(true);
+  it('agent can transition kicked_back_to_sales -> pending_manager_review', () => {
+    expect(canTransitionStatus('agent', 'kicked_back_to_sales', 'pending_manager_review')).toBe(true);
   });
 
-  it('underwriter can transition sent_to_underwriting -> underwriting_assigned', () => {
-    expect(canTransitionStatus('underwriter', 'sent_to_underwriting', 'underwriting_assigned')).toBe(true);
+  it('underwriter can transition submitted_to_underwriting -> submitted_to_lender', () => {
+    expect(canTransitionStatus('underwriter', 'submitted_to_underwriting', 'submitted_to_lender')).toBe(true);
   });
 
-  it('underwriter can transition underwriting_reviewing -> completed', () => {
-    expect(canTransitionStatus('underwriter', 'underwriting_reviewing', 'completed')).toBe(true);
+  it('underwriter can transition submitted_to_underwriting -> kicked_back_to_sales', () => {
+    expect(canTransitionStatus('underwriter', 'submitted_to_underwriting', 'kicked_back_to_sales')).toBe(true);
   });
 
-  it('underwriter can transition underwriting_reviewing -> kicked_back_to_manager', () => {
-    expect(canTransitionStatus('underwriter', 'underwriting_reviewing', 'kicked_back_to_manager')).toBe(true);
+  it('underwriter can transition submitted_to_lender -> approved', () => {
+    expect(canTransitionStatus('underwriter', 'submitted_to_lender', 'approved')).toBe(true);
   });
 
   it('administrator can make any valid transition', () => {
-    expect(canTransitionStatus('administrator', 'submitted_to_manager', 'manager_reviewing')).toBe(true);
-    expect(canTransitionStatus('administrator', 'manager_reviewing', 'sent_to_underwriting')).toBe(true);
-    expect(canTransitionStatus('administrator', 'sent_to_underwriting', 'underwriting_assigned')).toBe(true);
-    expect(canTransitionStatus('administrator', 'underwriting_reviewing', 'completed')).toBe(true);
-    expect(canTransitionStatus('administrator', 'kicked_back_to_agent', 'resubmitted_to_manager')).toBe(true);
+    expect(canTransitionStatus('administrator', 'pending', 'pending_manager_review')).toBe(true);
+    expect(canTransitionStatus('administrator', 'pending_manager_review', 'submitted_to_underwriting')).toBe(true);
+    expect(canTransitionStatus('administrator', 'submitted_to_underwriting', 'submitted_to_lender')).toBe(true);
+    expect(canTransitionStatus('administrator', 'submitted_to_lender', 'approved')).toBe(true);
+    expect(canTransitionStatus('administrator', 'approved', 'signed_and_delivered')).toBe(true);
+    expect(canTransitionStatus('administrator', 'kicked_back_to_sales', 'pending_manager_review')).toBe(true);
   });
 
   it('cannot transition to an invalid target status', () => {
-    expect(canTransitionStatus('manager', 'submitted_to_manager', 'completed')).toBe(false);
+    expect(canTransitionStatus('manager', 'pending_manager_review', 'signed_and_delivered')).toBe(false);
   });
 
-  it('completed deals have no transitions', () => {
-    expect(canTransitionStatus('administrator', 'completed', 'submitted_to_manager')).toBe(false);
+  it('signed_and_delivered deals have no transitions', () => {
+    expect(canTransitionStatus('administrator', 'signed_and_delivered', 'pending')).toBe(false);
   });
 
   it('cancelled deals have no transitions', () => {
-    expect(canTransitionStatus('administrator', 'cancelled', 'submitted_to_manager')).toBe(false);
+    expect(canTransitionStatus('administrator', 'cancelled', 'pending')).toBe(false);
   });
 
   it('executive cannot make any transitions', () => {
-    expect(canTransitionStatus('executive', 'submitted_to_manager', 'manager_reviewing')).toBe(false);
-    expect(canTransitionStatus('executive', 'manager_reviewing', 'sent_to_underwriting')).toBe(false);
+    expect(canTransitionStatus('executive', 'pending_manager_review', 'submitted_to_underwriting')).toBe(false);
   });
 });
 
 // === getAvailableTransitions ===
 
 describe('getAvailableTransitions', () => {
-  it('manager gets [manager_reviewing] for submitted_to_manager', () => {
-    expect(getAvailableTransitions('manager', 'submitted_to_manager')).toEqual(['manager_reviewing']);
+  it('agent gets [pending_manager_review] for pending', () => {
+    expect(getAvailableTransitions('agent', 'pending')).toEqual(['pending_manager_review']);
   });
 
-  it('manager gets [sent_to_underwriting, kicked_back_to_agent, cancelled] for manager_reviewing', () => {
-    expect(getAvailableTransitions('manager', 'manager_reviewing')).toEqual([
-      'sent_to_underwriting',
-      'kicked_back_to_agent',
+  it('manager gets [submitted_to_underwriting, kicked_back_to_sales, cancelled] for pending_manager_review', () => {
+    expect(getAvailableTransitions('manager', 'pending_manager_review')).toEqual([
+      'submitted_to_underwriting',
+      'kicked_back_to_sales',
       'cancelled',
     ]);
   });
 
-  it('underwriter gets [underwriting_assigned] for sent_to_underwriting', () => {
-    expect(getAvailableTransitions('underwriter', 'sent_to_underwriting')).toEqual([
-      'underwriting_assigned',
+  it('underwriter gets [submitted_to_lender, kicked_back_to_sales, cancelled] for submitted_to_underwriting', () => {
+    expect(getAvailableTransitions('underwriter', 'submitted_to_underwriting')).toEqual([
+      'submitted_to_lender',
+      'kicked_back_to_sales',
+      'cancelled',
     ]);
   });
 
-  it('underwriter gets [underwriting_reviewing] for underwriting_assigned', () => {
-    expect(getAvailableTransitions('underwriter', 'underwriting_assigned')).toEqual([
-      'underwriting_reviewing',
+  it('underwriter gets [approved, kicked_back_to_sales, cancelled] for submitted_to_lender', () => {
+    expect(getAvailableTransitions('underwriter', 'submitted_to_lender')).toEqual([
+      'approved',
+      'kicked_back_to_sales',
+      'cancelled',
     ]);
   });
 
-  it('underwriter gets [kicked_back_to_manager, completed] for underwriting_reviewing', () => {
-    expect(getAvailableTransitions('underwriter', 'underwriting_reviewing')).toEqual([
-      'kicked_back_to_manager',
-      'completed',
+  it('agent gets [pending_manager_review, cancelled] for kicked_back_to_sales', () => {
+    expect(getAvailableTransitions('agent', 'kicked_back_to_sales')).toEqual([
+      'pending_manager_review',
+      'cancelled',
     ]);
   });
 
-  it('agent gets [resubmitted_to_manager] for kicked_back_to_agent', () => {
-    expect(getAvailableTransitions('agent', 'kicked_back_to_agent')).toEqual([
-      'resubmitted_to_manager',
-    ]);
-  });
-
-  it('agent gets empty array for submitted_to_manager (no permission)', () => {
-    expect(getAvailableTransitions('agent', 'submitted_to_manager')).toEqual([]);
+  it('agent gets empty array for pending_manager_review (no permission)', () => {
+    expect(getAvailableTransitions('agent', 'pending_manager_review')).toEqual([]);
   });
 
   it('executive gets empty array for any status', () => {
-    expect(getAvailableTransitions('executive', 'submitted_to_manager')).toEqual([]);
-    expect(getAvailableTransitions('executive', 'manager_reviewing')).toEqual([]);
+    expect(getAvailableTransitions('executive', 'pending_manager_review')).toEqual([]);
+    expect(getAvailableTransitions('executive', 'submitted_to_underwriting')).toEqual([]);
   });
 
-  it('returns empty array for completed status', () => {
-    expect(getAvailableTransitions('administrator', 'completed')).toEqual([]);
+  it('returns empty array for signed_and_delivered status', () => {
+    expect(getAvailableTransitions('administrator', 'signed_and_delivered')).toEqual([]);
   });
 
   it('returns empty array for cancelled status', () => {
     expect(getAvailableTransitions('administrator', 'cancelled')).toEqual([]);
-  });
-
-  it('manager gets correct options for kicked_back_to_manager', () => {
-    expect(getAvailableTransitions('manager', 'kicked_back_to_manager')).toEqual([
-      'kicked_back_to_agent',
-      'resubmitted_to_underwriting',
-      'cancelled',
-    ]);
-  });
-
-  it('manager gets correct options for resubmitted_to_manager', () => {
-    expect(getAvailableTransitions('manager', 'resubmitted_to_manager')).toEqual([
-      'sent_to_underwriting',
-      'kicked_back_to_agent',
-      'resubmitted_to_underwriting',
-      'cancelled',
-    ]);
   });
 });
 
@@ -580,37 +464,37 @@ describe('canSendActionRequired', () => {
 // === canClaimDeal ===
 
 describe('canClaimDeal', () => {
-  it('underwriter can claim deal when sent_to_underwriting and no assigned underwriter', () => {
-    const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus, assigned_underwriter: null };
+  it('underwriter can claim deal when submitted_to_underwriting and no assigned underwriter', () => {
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus, assigned_underwriter: null };
     expect(canClaimDeal(mockUnderwriter, uwDeal)).toBe(true);
   });
 
   it('underwriter cannot claim deal with assigned underwriter', () => {
     const assignedDeal = {
       ...mockDeal,
-      status: 'sent_to_underwriting' as DealStatus,
+      status: 'submitted_to_underwriting' as DealStatus,
       assigned_underwriter: 'uw-2',
     };
     expect(canClaimDeal(mockUnderwriter, assignedDeal)).toBe(false);
   });
 
   it('underwriter cannot claim deal in wrong status', () => {
-    const reviewingDeal = { ...mockDeal, status: 'underwriting_reviewing' as DealStatus };
-    expect(canClaimDeal(mockUnderwriter, reviewingDeal)).toBe(false);
+    const approvedDeal = { ...mockDeal, status: 'approved' as DealStatus };
+    expect(canClaimDeal(mockUnderwriter, approvedDeal)).toBe(false);
   });
 
   it('manager cannot claim deal', () => {
-    const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus };
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
     expect(canClaimDeal(mockManager, uwDeal)).toBe(false);
   });
 
   it('agent cannot claim deal', () => {
-    const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus };
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
     expect(canClaimDeal(mockAgent, uwDeal)).toBe(false);
   });
 
   it('administrator cannot claim deal (must be underwriter)', () => {
-    const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus };
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
     expect(canClaimDeal(mockAdmin, uwDeal)).toBe(false);
   });
 });
@@ -618,36 +502,22 @@ describe('canClaimDeal', () => {
 // === canApproveAndForward ===
 
 describe('canApproveAndForward', () => {
-  it('manager can approve in submitted_to_manager', () => {
+  it('manager can approve in pending_manager_review', () => {
     expect(canApproveAndForward(mockManager, mockDeal)).toBe(true);
   });
 
-  it('manager can approve in manager_reviewing', () => {
-    const reviewingDeal = { ...mockDeal, status: 'manager_reviewing' as DealStatus };
-    expect(canApproveAndForward(mockManager, reviewingDeal)).toBe(true);
-  });
-
-  it('manager can approve in resubmitted_to_manager', () => {
-    const resubDeal = { ...mockDeal, status: 'resubmitted_to_manager' as DealStatus };
-    expect(canApproveAndForward(mockManager, resubDeal)).toBe(true);
-  });
-
-  it('manager cannot approve in sent_to_underwriting', () => {
-    const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus };
+  it('manager cannot approve in submitted_to_underwriting', () => {
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
     expect(canApproveAndForward(mockManager, uwDeal)).toBe(false);
   });
 
-  it('manager cannot approve in completed', () => {
-    const completedDeal = { ...mockDeal, status: 'completed' as DealStatus };
+  it('manager cannot approve in signed_and_delivered', () => {
+    const completedDeal = { ...mockDeal, status: 'signed_and_delivered' as DealStatus };
     expect(canApproveAndForward(mockManager, completedDeal)).toBe(false);
   });
 
-  it('administrator can approve in valid statuses', () => {
+  it('administrator can approve in pending_manager_review', () => {
     expect(canApproveAndForward(mockAdmin, mockDeal)).toBe(true);
-    const reviewingDeal = { ...mockDeal, status: 'manager_reviewing' as DealStatus };
-    expect(canApproveAndForward(mockAdmin, reviewingDeal)).toBe(true);
-    const resubDeal = { ...mockDeal, status: 'resubmitted_to_manager' as DealStatus };
-    expect(canApproveAndForward(mockAdmin, resubDeal)).toBe(true);
   });
 
   it('agent cannot approve and forward', () => {
@@ -663,53 +533,42 @@ describe('canApproveAndForward', () => {
   });
 });
 
-// === canKickBackToAgent ===
+// === canKickBackToSales ===
 
-describe('canKickBackToAgent', () => {
-  it('manager can kick back in submitted_to_manager', () => {
-    expect(canKickBackToAgent(mockManager, mockDeal)).toBe(true);
+describe('canKickBackToSales', () => {
+  it('manager can kick back in pending_manager_review', () => {
+    expect(canKickBackToSales(mockManager, mockDeal)).toBe(true);
   });
 
-  it('manager can kick back in manager_reviewing', () => {
-    const reviewingDeal = { ...mockDeal, status: 'manager_reviewing' as DealStatus };
-    expect(canKickBackToAgent(mockManager, reviewingDeal)).toBe(true);
+  it('manager cannot kick back in submitted_to_underwriting', () => {
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
+    expect(canKickBackToSales(mockManager, uwDeal)).toBe(false);
   });
 
-  it('manager can kick back in kicked_back_to_manager', () => {
-    const kickedDeal = { ...mockDeal, status: 'kicked_back_to_manager' as DealStatus };
-    expect(canKickBackToAgent(mockManager, kickedDeal)).toBe(true);
+  it('underwriter can kick back in submitted_to_underwriting', () => {
+    const uwDeal = { ...mockDeal, status: 'submitted_to_underwriting' as DealStatus };
+    expect(canKickBackToSales(mockUnderwriter, uwDeal)).toBe(true);
   });
 
-  it('manager can kick back in resubmitted_to_manager', () => {
-    const resubDeal = { ...mockDeal, status: 'resubmitted_to_manager' as DealStatus };
-    expect(canKickBackToAgent(mockManager, resubDeal)).toBe(true);
+  it('underwriter can kick back in submitted_to_lender', () => {
+    const lenderDeal = { ...mockDeal, status: 'submitted_to_lender' as DealStatus };
+    expect(canKickBackToSales(mockUnderwriter, lenderDeal)).toBe(true);
   });
 
-  it('manager cannot kick back in sent_to_underwriting', () => {
-    const uwDeal = { ...mockDeal, status: 'sent_to_underwriting' as DealStatus };
-    expect(canKickBackToAgent(mockManager, uwDeal)).toBe(false);
+  it('underwriter cannot kick back in approved', () => {
+    const approvedDeal = { ...mockDeal, status: 'approved' as DealStatus };
+    expect(canKickBackToSales(mockUnderwriter, approvedDeal)).toBe(false);
   });
 
-  it('manager cannot kick back in completed', () => {
-    const completedDeal = { ...mockDeal, status: 'completed' as DealStatus };
-    expect(canKickBackToAgent(mockManager, completedDeal)).toBe(false);
+  it('administrator can kick back in pending_manager_review', () => {
+    expect(canKickBackToSales(mockAdmin, mockDeal)).toBe(true);
   });
 
-  it('administrator can kick back in valid statuses', () => {
-    expect(canKickBackToAgent(mockAdmin, mockDeal)).toBe(true);
-    const kickedDeal = { ...mockDeal, status: 'kicked_back_to_manager' as DealStatus };
-    expect(canKickBackToAgent(mockAdmin, kickedDeal)).toBe(true);
+  it('agent cannot kick back to sales', () => {
+    expect(canKickBackToSales(mockAgent, mockDeal)).toBe(false);
   });
 
-  it('agent cannot kick back to agent', () => {
-    expect(canKickBackToAgent(mockAgent, mockDeal)).toBe(false);
-  });
-
-  it('underwriter cannot kick back to agent', () => {
-    expect(canKickBackToAgent(mockUnderwriter, mockDeal)).toBe(false);
-  });
-
-  it('executive cannot kick back to agent', () => {
-    expect(canKickBackToAgent(mockExecutive, mockDeal)).toBe(false);
+  it('executive cannot kick back to sales', () => {
+    expect(canKickBackToSales(mockExecutive, mockDeal)).toBe(false);
   });
 });

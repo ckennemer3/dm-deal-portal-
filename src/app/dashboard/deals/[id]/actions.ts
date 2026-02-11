@@ -33,9 +33,10 @@ export async function claimDeal(dealId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  // In the new workflow, claiming a deal just assigns the underwriter.
+  // The status remains 'submitted_to_underwriting' — no status change.
   const { error } = await supabase.from('deals').update({
     assigned_underwriter: user.id,
-    status: 'underwriting_assigned',
   }).eq('id', dealId);
   if (error) throw new Error(error.message);
 
@@ -44,14 +45,6 @@ export async function claimDeal(dealId: string) {
     assigned_to: user.id,
     assigned_by: null,
     assignment_type: 'underwriter_claim',
-  });
-
-  await supabase.from('deal_status_history').insert({
-    deal_id: dealId,
-    from_status: 'sent_to_underwriting',
-    to_status: 'underwriting_assigned',
-    changed_by: user.id,
-    notes: 'Deal claimed by underwriter',
   });
 
   revalidatePath(`/deals/${dealId}`);
