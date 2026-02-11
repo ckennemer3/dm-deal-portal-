@@ -76,12 +76,12 @@ export function TeamManagement({ teams, offices, users }: TeamManagementProps) {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-surface-50 border-b border-surface-200">
-                <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Team Name</th>
-                <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Office</th>
-                <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Manager</th>
-                <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Members</th>
-                <th className="text-right text-xs font-medium text-surface-500 uppercase px-6 py-3">Actions</th>
+              <tr className="bg-surface-800">
+                <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Team Name</th>
+                <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Office</th>
+                <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Manager</th>
+                <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Members</th>
+                <th className="text-right text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-200">

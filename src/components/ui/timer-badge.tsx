@@ -14,16 +14,16 @@ interface TimerBadgeProps {
 
 const urgencyStyles = {
   green: {
-    badge: 'bg-green-50 text-green-700 ring-green-600/20',
-    dot: 'bg-green-500',
+    badge: 'bg-emerald-100 text-emerald-900 ring-emerald-600/20',
+    dot: 'bg-[#83E8AB]',
   },
   yellow: {
-    badge: 'bg-amber-50 text-amber-700 ring-amber-600/20',
-    dot: 'bg-amber-500',
+    badge: 'bg-amber-100 text-amber-900 ring-amber-600/20',
+    dot: 'bg-[#FFBE0B]',
   },
   red: {
-    badge: 'bg-red-50 text-red-700 ring-red-600/20',
-    dot: 'bg-red-500 animate-pulse',
+    badge: 'bg-red-100 text-red-900 ring-red-600/20',
+    dot: 'bg-[#DD0F15] animate-pulse',
   },
 };
 

@@ -48,12 +48,12 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
         if (e.target === overlayRef.current) onClose();
       }}
     >
-      <div className={cn('bg-white rounded-2xl shadow-modal w-full animate-slide-up', sizeClasses[size])}>
+      <div className={cn('bg-white rounded-lg shadow-modal w-full animate-slide-up', sizeClasses[size])}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200">
-          <h2 className="text-lg font-semibold text-surface-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-surface-900 tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
+            className="p-1 rounded-md text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -98,8 +98,8 @@ export function ReportingDashboard({ deals, offices, teams, agents }: ReportingD
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-surface-900">Reporting</h1>
-        <p className="text-surface-500 mt-1">Deal performance metrics and analytics.</p>
+        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Reporting</h1>
+        <p className="text-surface-500 mt-1 text-sm">Deal performance metrics and analytics.</p>
       </div>
 
       {/* Filters */}

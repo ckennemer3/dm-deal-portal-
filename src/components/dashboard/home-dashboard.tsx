@@ -20,10 +20,10 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
     <div className="space-y-8">
       {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold text-surface-900">
+        <h1 className="text-2xl font-bold text-surface-900 tracking-tight">
           Welcome back, {user.first_name}
         </h1>
-        <p className="text-surface-500 mt-1">
+        <p className="text-surface-500 mt-1 text-sm">
           Here&apos;s what&apos;s happening with your deals today.
         </p>
       </div>
@@ -37,17 +37,17 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
               href={module.available ? module.href : '#'}
               className={!module.available ? 'pointer-events-none' : ''}
             >
-              <Card hover={module.available} className={!module.available ? 'opacity-50' : ''}>
+              <Card hover={module.available} className={!module.available ? 'opacity-40' : ''}>
                 <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  <div className={`w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 ${
                     module.available ? 'bg-brand-100' : 'bg-surface-100'
                   }`}>
-                    <svg className={`w-6 h-6 ${module.available ? 'text-brand-600' : 'text-surface-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className={`w-5 h-5 ${module.available ? 'text-brand-600' : 'text-surface-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-semibold text-surface-900 text-sm">{module.title}</h3>
+                    <h3 className="font-semibold text-surface-900 text-sm tracking-tight">{module.title}</h3>
                     <p className="text-xs text-surface-500 mt-1">{module.description}</p>
                     {!module.available && (
                       <Badge variant="default" className="mt-2">Coming Soon</Badge>
@@ -62,12 +62,12 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Action Items */}
-        <Card padding="none">
-          <div className="px-6 py-4 border-b border-surface-200">
-            <CardHeader
-              title="Action Items"
-              description={`${actionMessages.length} items need your attention`}
-            />
+        <div className="card overflow-hidden">
+          <div className="px-6 py-3 bg-surface-800">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Action Items</h3>
+              <span className="text-xs text-white/60">{actionMessages.length} pending</span>
+            </div>
           </div>
           <div className="divide-y divide-surface-200">
             {actionMessages.length === 0 ? (
@@ -100,20 +100,17 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
               ))
             )}
           </div>
-        </Card>
+        </div>
 
         {/* Recent Deals */}
-        <Card padding="none">
-          <div className="px-6 py-4 border-b border-surface-200">
-            <CardHeader
-              title="Recent Deals"
-              description="Your latest deal activity"
-              action={
-                <Link href="/dashboard/deals" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
-                  View all
-                </Link>
-              }
-            />
+        <div className="card overflow-hidden">
+          <div className="px-6 py-3 bg-surface-800">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Recent Deals</h3>
+              <Link href="/dashboard/deals" className="text-xs text-white/60 hover:text-white transition-colors">
+                View all →
+              </Link>
+            </div>
           </div>
           <div className="divide-y divide-surface-200">
             {recentDeals.length === 0 ? (
@@ -153,7 +150,7 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
               })
             )}
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

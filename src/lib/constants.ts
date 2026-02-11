@@ -19,17 +19,17 @@ export const DEAL_TYPE_LABELS: Record<DealType, string> = {
 
 // === Deal Status Labels & Colors ===
 export const DEAL_STATUS_CONFIG: Record<DealStatus, { label: string; color: string; bgColor: string }> = {
-  submitted_to_manager: { label: 'Submitted to Manager', color: 'text-blue-700', bgColor: 'bg-blue-50' },
-  manager_reviewing: { label: 'Manager Reviewing', color: 'text-blue-700', bgColor: 'bg-blue-50' },
-  sent_to_underwriting: { label: 'Sent to Underwriting', color: 'text-purple-700', bgColor: 'bg-purple-50' },
-  underwriting_assigned: { label: 'Underwriting Assigned', color: 'text-purple-700', bgColor: 'bg-purple-50' },
-  underwriting_reviewing: { label: 'Underwriting Reviewing', color: 'text-purple-700', bgColor: 'bg-purple-50' },
-  kicked_back_to_manager: { label: 'Kicked Back to Manager', color: 'text-amber-700', bgColor: 'bg-amber-50' },
-  kicked_back_to_agent: { label: 'Kicked Back to Agent', color: 'text-amber-700', bgColor: 'bg-amber-50' },
-  resubmitted_to_manager: { label: 'Resubmitted to Manager', color: 'text-blue-700', bgColor: 'bg-blue-50' },
-  resubmitted_to_underwriting: { label: 'Resubmitted to Underwriting', color: 'text-purple-700', bgColor: 'bg-purple-50' },
-  completed: { label: 'Completed', color: 'text-green-700', bgColor: 'bg-green-50' },
-  cancelled: { label: 'Cancelled', color: 'text-surface-600', bgColor: 'bg-surface-100' },
+  submitted_to_manager: { label: 'Submitted to Manager', color: 'text-brand-800', bgColor: 'bg-brand-100' },
+  manager_reviewing: { label: 'Manager Reviewing', color: 'text-brand-800', bgColor: 'bg-brand-100' },
+  sent_to_underwriting: { label: 'Sent to Underwriting', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  underwriting_assigned: { label: 'Underwriting Assigned', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  underwriting_reviewing: { label: 'Underwriting Reviewing', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  kicked_back_to_manager: { label: 'Kicked Back to Manager', color: 'text-amber-900', bgColor: 'bg-amber-100' },
+  kicked_back_to_agent: { label: 'Kicked Back to Agent', color: 'text-amber-900', bgColor: 'bg-amber-100' },
+  resubmitted_to_manager: { label: 'Resubmitted to Manager', color: 'text-brand-800', bgColor: 'bg-brand-100' },
+  resubmitted_to_underwriting: { label: 'Resubmitted to Underwriting', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  completed: { label: 'Completed', color: 'text-emerald-900', bgColor: 'bg-emerald-100' },
+  cancelled: { label: 'Cancelled', color: 'text-surface-600', bgColor: 'bg-surface-200' },
 };
 
 // === Vehicle Condition Labels ===

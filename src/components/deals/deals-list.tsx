@@ -41,8 +41,8 @@ export function DealsList({ deals, user }: DealsListProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-surface-900">Deals</h1>
-          <p className="text-surface-500 mt-1">{deals.length} total deals</p>
+          <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Deals</h1>
+          <p className="text-surface-500 mt-1 text-sm">{deals.length} total deals</p>
         </div>
         {canSubmitDeals(user.role) && (
           <Link href="/dashboard/deals/new">
@@ -66,14 +66,14 @@ export function DealsList({ deals, user }: DealsListProps) {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-surface-50 border-b border-surface-200">
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Deal #</th>
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Client</th>
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Vehicle</th>
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Type</th>
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Status</th>
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Age</th>
-                  <th className="text-left text-xs font-medium text-surface-500 uppercase px-6 py-3">Submitted</th>
+                <tr className="bg-surface-800">
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Deal #</th>
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Client</th>
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Vehicle</th>
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Type</th>
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Age</th>
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-6 py-3">Submitted</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-200">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { UserWithRelations, UserRole } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/constants';
@@ -72,8 +73,6 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 
 /**
  * Admin-specific inner component that consumes the RoleSwitcher context.
- * This exists as a separate component so the useRoleSwitcher hook is called
- * unconditionally (satisfying React's Rules of Hooks).
  */
 function AdminDashboardShellInner({ user, children }: DashboardShellProps) {
   const { effectiveRole, isViewingAs, setViewAsRole } = useRoleSwitcher();
@@ -98,10 +97,6 @@ interface DashboardShellContentProps {
   onRoleChange?: (role: UserRole | null) => void;
 }
 
-/**
- * The actual dashboard shell UI. Receives effectiveRole and isViewingAs as props
- * so it doesn't need to call any hooks conditionally.
- */
 function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onRoleChange }: DashboardShellContentProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -126,11 +121,11 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
   };
 
   return (
-    <div className="min-h-screen bg-surface-50">
+    <div className="min-h-screen bg-surface-100">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -138,16 +133,14 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-surface-200 transform transition-transform duration-200 lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 w-64 bg-surface-900 transform transition-transform duration-200 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 px-6 h-16 border-b border-surface-200">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <span className="text-xs font-bold text-white">D&M</span>
-          </div>
-          <span className="font-semibold text-surface-900">Deal Portal</span>
+        <div className="flex items-center gap-3 px-6 h-16 border-b border-white/10">
+          <Image src="/D&M Logo.jpg" alt="D&M" width={36} height={36} className="rounded" />
+          <span className="font-semibold text-white tracking-tight">Deal Portal</span>
         </div>
 
         {/* Navigation */}
@@ -163,10 +156,10 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-surface-600 hover:bg-surface-100 hover:text-surface-900'
+                    ? 'bg-white/10 text-white'
+                    : 'text-surface-400 hover:bg-white/5 hover:text-white'
                 )}
               >
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -179,22 +172,22 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
         </nav>
 
         {/* User info at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-surface-200">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center">
-              <span className="text-sm font-medium text-brand-700">
+            <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center">
+              <span className="text-sm font-medium text-white">
                 {getInitials(user.first_name, user.last_name)}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-surface-900 truncate">
+              <p className="text-sm font-medium text-white truncate">
                 {user.first_name} {user.last_name}
               </p>
-              <p className="text-xs text-surface-500">{ROLE_LABELS[user.role]}</p>
+              <p className="text-xs text-surface-400">{ROLE_LABELS[user.role]}</p>
             </div>
             <button
               onClick={handleSignOut}
-              className="p-1.5 rounded-lg text-surface-400 hover:text-surface-600 hover:bg-surface-100 transition-colors"
+              className="p-1.5 rounded-md text-surface-400 hover:text-white hover:bg-white/10 transition-colors"
               title="Sign out"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -207,10 +200,10 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-white/80 backdrop-blur-md border-b border-surface-200 lg:px-8">
+        {/* Top bar - dark */}
+        <header className="sticky top-0 z-30 flex items-center h-14 px-4 bg-surface-900 border-b border-white/10 lg:px-8">
           <button
-            className="lg:hidden p-2 -ml-2 rounded-lg text-surface-600 hover:bg-surface-100"
+            className="lg:hidden p-2 -ml-2 rounded-md text-surface-400 hover:text-white hover:bg-white/10"
             onClick={() => setSidebarOpen(true)}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -224,22 +217,22 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
             {/* Role Switcher Dropdown (admin only) */}
             {user.role === 'administrator' && (
               <div className="flex items-center gap-2">
-                <label htmlFor="role-switcher" className="text-xs text-surface-500 hidden sm:block">
-                  View as:
+                <label htmlFor="role-switcher" className="text-xs text-surface-400 hidden sm:block uppercase tracking-wide">
+                  Viewing as:
                 </label>
                 <select
                   id="role-switcher"
                   value={effectiveRole}
                   onChange={handleRoleChange}
                   className={cn(
-                    'text-xs border rounded px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500',
+                    'text-xs font-semibold rounded-md px-2.5 py-1.5 bg-white/10 focus:outline-none focus:ring-2 focus:ring-brand-500 uppercase tracking-wide',
                     isViewingAs
-                      ? 'border-amber-400 text-amber-700 bg-amber-50'
-                      : 'border-surface-300 text-surface-700'
+                      ? 'border border-brand-500 text-brand-400'
+                      : 'border border-white/20 text-white'
                   )}
                 >
                   {ALL_ROLES.map((role) => (
-                    <option key={role} value={role}>
+                    <option key={role} value={role} className="bg-surface-900 text-white">
                       {ROLE_LABELS[role]}
                     </option>
                   ))}
@@ -248,7 +241,7 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
             )}
 
             {user.team?.name && (
-              <span className="text-sm text-surface-500 hidden md:block">
+              <span className="text-xs text-surface-400 hidden md:block">
                 {user.team.office?.name} &mdash; {user.team.name}
               </span>
             )}
@@ -257,17 +250,17 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
 
         {/* View-as banner */}
         {isViewingAs && (
-          <div className="sticky top-16 z-20 flex items-center justify-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
+          <div className="sticky top-14 z-20 flex items-center justify-center gap-3 px-4 py-2 bg-brand-950 border-b border-brand-800 text-brand-300 text-xs font-medium uppercase tracking-wide">
             <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <span>
-              Viewing as <strong>{ROLE_LABELS[effectiveRole]}</strong>
+              Viewing as <strong className="text-white">{ROLE_LABELS[effectiveRole]}</strong>
             </span>
             <button
               onClick={handleResetRole}
-              className="ml-1 px-2 py-0.5 text-xs font-medium rounded bg-amber-200 hover:bg-amber-300 text-amber-900 transition-colors"
+              className="ml-1 px-2 py-0.5 text-xs font-semibold rounded bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
               Reset
             </button>

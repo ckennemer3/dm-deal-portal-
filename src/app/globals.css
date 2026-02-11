@@ -4,12 +4,12 @@
 
 @layer base {
   :root {
-    --background: 255 255 255;
-    --foreground: 33 37 41;
+    --background: 248 250 252;
+    --foreground: 15 23 42;
   }
 
   body {
-    @apply bg-surface-50 text-surface-900 antialiased;
+    @apply bg-surface-100 text-surface-900 antialiased;
   }
 
   * {
@@ -19,27 +19,28 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl border border-surface-200 shadow-card;
+    @apply bg-white rounded-lg border border-surface-200;
   }
 
   .card-hover {
-    @apply card transition-shadow duration-200 hover:shadow-card-hover;
+    @apply card transition-colors duration-150 hover:border-surface-300;
   }
 
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wide;
   }
 
   .input-base {
-    @apply w-full rounded-lg border border-surface-300 px-3 py-2 text-sm
+    @apply w-full rounded-md border border-surface-300 px-3 py-2 text-sm
+           bg-white
            placeholder:text-surface-400
            focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500
-           disabled:bg-surface-100 disabled:cursor-not-allowed
+           disabled:bg-surface-50 disabled:cursor-not-allowed
            transition-colors duration-150;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium
            transition-all duration-150
            focus:outline-none focus:ring-2 focus:ring-offset-2
            disabled:opacity-50 disabled:cursor-not-allowed;
@@ -57,11 +58,11 @@
   }
 
   .btn-danger {
-    @apply btn bg-status-danger text-white hover:bg-red-700 focus:ring-red-500;
+    @apply btn bg-status-danger text-white hover:bg-red-600 focus:ring-red-500;
   }
 
   .btn-ghost {
-    @apply btn text-surface-600 hover:text-surface-900 hover:bg-surface-100
+    @apply btn text-surface-500 hover:text-surface-900 hover:bg-surface-100
            focus:ring-brand-500;
   }
 
@@ -74,7 +75,7 @@
   }
 
   .section-title {
-    @apply text-lg font-semibold text-surface-900;
+    @apply text-lg font-semibold text-surface-900 tracking-tight;
   }
 
   .label {
