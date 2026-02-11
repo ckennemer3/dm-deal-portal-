@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
+import { DOCUMENT_TYPE_LABELS } from '@/lib/constants';
+import type { DocumentType } from '@/lib/types';
 
 export async function uploadDocument(
   dealId: string,
@@ -33,6 +35,32 @@ export async function uploadDocument(
   const timestamp = Date.now();
   const storagePath = `deals/${dealId}/${documentType}/${timestamp}.${ext}`;
 
+  // Fetch deal data for dynamic document naming
+  const { data: dealData } = await supabase
+    .from('deals')
+    .select(`
+      vehicle_year,
+      vehicle_model,
+      applicants:deal_applicants(first_name, last_name, applicant_number)
+    `)
+    .eq('id', dealId)
+    .single();
+
+  // Build dynamic display name: "FirstName LastName - Year Model - DocType.ext"
+  let dynamicDisplayName = file.name; // fallback to original
+  if (dealData) {
+    const primaryApplicant = dealData.applicants
+      ?.sort((a: any, b: any) => a.applicant_number - b.applicant_number)
+      ?.find((a: any) => a.applicant_number === 1);
+    const applicantName = primaryApplicant
+      ? `${primaryApplicant.first_name} ${primaryApplicant.last_name}`
+      : 'Unknown';
+    const vehicleInfo = `${dealData.vehicle_year || ''} ${dealData.vehicle_model || ''}`.trim();
+    const docTypeLabel = DOCUMENT_TYPE_LABELS[documentType as DocumentType] || documentType;
+
+    dynamicDisplayName = `${applicantName} - ${vehicleInfo} - ${docTypeLabel}.${ext}`;
+  }
+
   // Upload to Supabase Storage
   const { error: uploadError } = await supabase.storage
     .from('deal-documents')
@@ -57,7 +85,7 @@ export async function uploadDocument(
     applicant_id: applicantId,
     original_filename: file.name,
     storage_path: storagePath,
-    display_name: file.name,
+    display_name: dynamicDisplayName,
     uploaded_by: user.id,
   });
 
@@ -106,14 +134,16 @@ export async function deleteDocument(documentId: string) {
   return { success: true };
 }
 
-export async function getDocumentSignedUrl(storagePath: string) {
+export async function getDocumentSignedUrl(storagePath: string, displayName?: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
   const { data, error } = await supabase.storage
     .from('deal-documents')
-    .createSignedUrl(storagePath, 3600); // 1 hour
+    .createSignedUrl(storagePath, 3600, {
+      download: displayName || true,
+    });
 
   if (error) throw new Error('Failed to generate download URL');
   return { url: data.signedUrl };

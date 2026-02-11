@@ -29,7 +29,7 @@ const initialFormData: DealFormData = {
   vehicle_year: '', vehicle_make: '', vehicle_model: '', vehicle_trim: '',
   vehicle_mileage: '', msrp: '', invoice: '',
   jd_power_retail: '', jd_power_wholesale: '',
-  net_cap_cost: '', total_amount_financed: '', monthly_payment: '',
+  net_cap_cost: '', total_amount_financed: '', term: '', monthly_payment: '',
   has_trade_in: null,
   trade_in: { year: '', make: '', model: '', monthly_payment: '', lienholder: '', who_drives: '' },
   has_open_autos: null,

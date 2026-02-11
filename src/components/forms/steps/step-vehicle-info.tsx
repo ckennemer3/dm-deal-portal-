@@ -101,6 +101,10 @@ export function StepVehicleInfo({ formData, updateFormData, errors }: StepProps)
               onChange={(v) => updateFormData({ total_amount_financed: v })} error={errors.total_amount_financed} />
           )}
 
+          <Input label="Term (months)" type="number" value={formData.term}
+            onChange={(e) => updateFormData({ term: e.target.value })} error={errors.term}
+            placeholder="e.g. 36, 48, 60, 72" className="max-w-xs" />
+
           <CurrencyInput label="Monthly Payment" required value={formData.monthly_payment}
             onChange={(v) => updateFormData({ monthly_payment: v })} error={errors.monthly_payment} />
         </div>

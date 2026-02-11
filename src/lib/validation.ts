@@ -92,6 +92,10 @@ export const submitDealSchema = z.object({
   net_cap_cost: z.string().optional(),
   total_amount_financed: z.string().optional(),
 
+  term: z.string().optional().refine(
+    (val) => !val || (!isNaN(Number(val)) && Number(val) > 0 && Number.isInteger(Number(val))),
+    { message: 'Term must be a positive whole number' }
+  ),
   monthly_payment: numericStringSchema(0.01),
 
   has_trade_in: z.boolean().nullable(),
@@ -203,6 +207,7 @@ const editableDealFields = [
   'net_cap_cost',
   'total_amount_financed',
   'monthly_payment',
+  'term',
   'deal_strengths',
   'derogatory_credit_explanation',
   'business_legal_name',

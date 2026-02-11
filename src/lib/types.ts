@@ -73,6 +73,7 @@ export interface Deal {
   net_cap_cost: number | null;
   total_amount_financed: number | null;
   monthly_payment: number;
+  term: number | null;
   has_trade_in: boolean;
   has_open_autos: boolean;
   has_business: boolean;
@@ -238,6 +239,7 @@ export interface DealFormData {
   jd_power_wholesale: string;
   net_cap_cost: string;
   total_amount_financed: string;
+  term: string;
   monthly_payment: string;
 
   // Step 4: Trade-In

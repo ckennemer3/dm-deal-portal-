@@ -41,6 +41,7 @@ const FIELD_LABELS: Record<string, string> = {
   net_cap_cost: 'Net Cap Cost',
   total_amount_financed: 'Amount Financed',
   monthly_payment: 'Monthly Payment',
+  term: 'Term (months)',
   deal_strengths: 'Deal Strengths',
   derogatory_credit_explanation: 'Derogatory Credit Explanation',
   business_legal_name: 'Business Legal Name',
@@ -391,9 +392,9 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
     }
   };
 
-  const handleDocumentDownload = async (storagePath: string) => {
+  const handleDocumentDownload = async (storagePath: string, displayName?: string) => {
     try {
-      const { url } = await getDocumentSignedUrl(storagePath);
+      const { url } = await getDocumentSignedUrl(storagePath, displayName);
       window.open(url, '_blank');
     } catch {
       // Silently fail — could show a toast in future
@@ -536,6 +537,9 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
               {deal.total_amount_financed != null && (
                 <EditableField fieldName="total_amount_financed" label="Amount Financed" value={deal.total_amount_financed} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
               )}
+              {deal.term != null && (
+                <EditableField fieldName="term" label="Term (months)" value={deal.term} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="text" />
+              )}
               <EditableField fieldName="monthly_payment" label="Monthly Payment" value={deal.monthly_payment} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
             </div>
           </Card>
@@ -644,7 +648,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
                       </p>
                     </div>
                     <button
-                      onClick={() => handleDocumentDownload(doc.storage_path)}
+                      onClick={() => handleDocumentDownload(doc.storage_path, doc.display_name)}
                       className="text-xs text-brand-600 hover:text-brand-700 font-medium flex-shrink-0 ml-2"
                     >
                       Download

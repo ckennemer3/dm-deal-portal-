@@ -56,6 +56,7 @@ export async function submitDeal(formData: DealFormData) {
       net_cap_cost: formData.net_cap_cost ? parseFloat(formData.net_cap_cost) : null,
       total_amount_financed: formData.total_amount_financed ? parseFloat(formData.total_amount_financed) : null,
       monthly_payment: parseFloat(formData.monthly_payment),
+      term: formData.term ? parseInt(formData.term) : null,
       has_trade_in: formData.has_trade_in === true,
       has_open_autos: formData.has_open_autos === true,
       has_business: formData.adding_business,
