@@ -1,4 +1,4 @@
-import { DealStatus, DealType, DocumentType, UserRole, VehicleCondition, TimerConfig } from './types';
+import { DealStatus, DealType, DocumentType, KickbackReason, UserRole, VehicleCondition, TimerConfig } from './types';
 
 // === Role Display Names ===
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -120,6 +120,15 @@ export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles:
     next: [],
     roles: [],
   },
+};
+
+// === Kickback Reasons ===
+export const KICKBACK_REASON_LABELS: Record<KickbackReason, string> = {
+  poor_deal_information: 'Poor Deal Information',
+  incomplete_application: 'Incomplete Application',
+  ltv_too_high: 'Loan to Value Too High',
+  missing_documents: 'Missing Documents for Submittal',
+  other: 'Other',
 };
 
 // === Default Timer Thresholds (hours) ===

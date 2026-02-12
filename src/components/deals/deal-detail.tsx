@@ -2,8 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserWithRelations, DealStatus } from '@/lib/types';
-import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DEAL_STATUS_CONFIG, DOCUMENT_TYPE_LABELS } from '@/lib/constants';
+import { UserWithRelations, DealStatus, KickbackReason } from '@/lib/types';
+import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DEAL_STATUS_CONFIG, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, Badge } from '@/components/ui/badge';
@@ -11,7 +11,7 @@ import { TimerBadge } from '@/components/ui/timer-badge';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getFullName } from '@/lib/utils';
+import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
 import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired } from '@/lib/permissions';
 import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
@@ -206,6 +206,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const router = useRouter();
   const [showKickbackModal, setShowKickbackModal] = useState(false);
   const [kickbackMessage, setKickbackMessage] = useState('');
+  const [kickbackReason, setKickbackReason] = useState<KickbackReason | ''>('');
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignTo, setReassignTo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -316,6 +317,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   };
 
   const handleKickback = async () => {
+    if (!kickbackReason) return;
     if (!kickbackMessage.trim()) return;
     setLoading(true);
     try {
@@ -323,10 +325,16 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
       const targetStatus = (user.role === 'underwriter')
         ? 'kicked_back_to_manager' as const
         : 'kicked_back_to_sales' as const;
-      await updateDealStatus(deal.id, targetStatus, kickbackMessage);
-      await sendMessage(deal.id, kickbackMessage, 'action_required');
+      const reasonLabel = KICKBACK_REASON_LABELS[kickbackReason as KickbackReason];
+      const notes = `${reasonLabel}: ${kickbackMessage}`;
+      await updateDealStatus(deal.id, targetStatus, notes, {
+        kickbackReason: kickbackReason as KickbackReason,
+        kickbackExplanation: kickbackMessage,
+      });
+      await sendMessage(deal.id, notes, 'action_required');
       setShowKickbackModal(false);
       setKickbackMessage('');
+      setKickbackReason('');
       router.refresh();
     } finally { setLoading(false); }
   };
@@ -562,6 +570,39 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
               )}
               <EditableField fieldName="monthly_payment" label="Monthly Payment" value={deal.monthly_payment} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
             </div>
+
+            {/* LTV Calculations */}
+            {(() => {
+              const isLease = deal.deal_type === 'lease' || deal.deal_type === 're_lease';
+              const numerator = isLease ? deal.net_cap_cost : deal.total_amount_financed;
+              const isUsed = deal.vehicle_condition === 'used';
+              const retailDenom = isUsed ? deal.jd_power_retail : deal.msrp;
+              const wholesaleDenom = isUsed ? deal.jd_power_wholesale : deal.invoice;
+              const retailLTV = calculateLTV(numerator, retailDenom);
+              const wholesaleLTV = calculateLTV(numerator, wholesaleDenom);
+
+              if (!numerator) return null;
+
+              return (
+                <div className="mt-4 pt-4 border-t border-surface-100">
+                  <h4 className="text-sm font-medium text-surface-700 mb-3">LTV Calculations</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-surface-500">{isUsed ? 'JD Retail' : 'MSRP'} LTV</span>
+                      <span className={`text-sm font-semibold ${getLTVColor(retailLTV)}`}>
+                        {formatPercentage(retailLTV)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-surface-500">{isUsed ? 'JD Wholesale' : 'Invoice'} LTV</span>
+                      <span className={`text-sm font-semibold ${getLTVColor(wholesaleLTV)}`}>
+                        {formatPercentage(wholesaleLTV)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </Card>
 
           {/* Trade-In */}
@@ -754,25 +795,47 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
       {/* Kickback Modal */}
       <Modal
         isOpen={showKickbackModal}
-        onClose={() => setShowKickbackModal(false)}
+        onClose={() => { setShowKickbackModal(false); setKickbackReason(''); setKickbackMessage(''); }}
         title={user.role === 'underwriter' ? 'Kick Back to Manager' : 'Kick Back to Sales'}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setShowKickbackModal(false)}>Cancel</Button>
-            <Button variant="danger" onClick={() => handleKickback()} loading={loading}>
+            <Button variant="secondary" onClick={() => { setShowKickbackModal(false); setKickbackReason(''); setKickbackMessage(''); }}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={() => handleKickback()}
+              loading={loading}
+              disabled={!kickbackReason || !kickbackMessage.trim()}
+            >
               Send Kickback
             </Button>
           </>
         }
       >
-        <Textarea
-          label="What needs to be addressed?"
-          required
-          value={kickbackMessage}
-          onChange={(e) => setKickbackMessage(e.target.value)}
-          placeholder="Explain what information or changes are needed..."
-          rows={4}
-        />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-surface-700 mb-1">
+              Reason <span className="text-status-danger">*</span>
+            </label>
+            <select
+              value={kickbackReason}
+              onChange={(e) => setKickbackReason(e.target.value as KickbackReason | '')}
+              className="input text-sm w-full"
+            >
+              <option value="">Select a reason...</option>
+              {Object.entries(KICKBACK_REASON_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <Textarea
+            label="Explanation"
+            required
+            value={kickbackMessage}
+            onChange={(e) => setKickbackMessage(e.target.value)}
+            placeholder={kickbackReason === 'other' ? 'Describe the issue...' : 'Provide details about what needs to be addressed...'}
+            rows={4}
+          />
+        </div>
       </Modal>
 
       {/* Reassign Modal */}

@@ -40,6 +40,13 @@ export interface Team {
 
 export type DealType = 'lease' | 'retail_purchase' | 're_lease' | 'lease_buyout';
 
+export type KickbackReason =
+  | 'poor_deal_information'
+  | 'incomplete_application'
+  | 'ltv_too_high'
+  | 'missing_documents'
+  | 'other';
+
 export type DealStatus =
   | 'pending'
   | 'pending_manager_review'

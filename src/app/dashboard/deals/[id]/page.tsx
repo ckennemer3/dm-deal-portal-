@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { DealDetail } from '@/components/deals/deal-detail';
+import type { UserRole } from '@/lib/types';
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: dealId } = await params;
@@ -21,6 +23,13 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       .eq('id', authUser.id).single());
   }
   if (!userProfile) redirect('/auth/login');
+
+  // Apply admin "View As" role override
+  const cookieStore = await cookies();
+  const viewAsRole = cookieStore.get('viewAsRole')?.value as UserRole | undefined;
+  if (userProfile.role === 'administrator' && viewAsRole) {
+    userProfile = { ...userProfile, role: viewAsRole };
+  }
 
   // Fetch deal with all related data
   const { data: deal, error } = await supabase

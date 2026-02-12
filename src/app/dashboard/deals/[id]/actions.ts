@@ -2,9 +2,14 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { DealStatus } from '@/lib/types';
+import { DealStatus, KickbackReason } from '@/lib/types';
 
-export async function updateDealStatus(dealId: string, newStatus: DealStatus, notes?: string) {
+interface StatusUpdateOptions {
+  kickbackReason?: KickbackReason;
+  kickbackExplanation?: string;
+}
+
+export async function updateDealStatus(dealId: string, newStatus: DealStatus, notes?: string, options?: StatusUpdateOptions) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -21,6 +26,8 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
     to_status: newStatus,
     changed_by: user.id,
     notes,
+    ...(options?.kickbackReason && { kickback_reason: options.kickbackReason }),
+    ...(options?.kickbackExplanation && { kickback_explanation: options.kickbackExplanation }),
   });
 
   revalidatePath(`/dashboard/deals/${dealId}`);
