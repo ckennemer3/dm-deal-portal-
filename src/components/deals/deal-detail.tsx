@@ -704,12 +704,9 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
               ) : (
                 deal.documents.map((doc: any) => (
                   <div key={doc.id} className="flex items-center justify-between py-2 border-b border-surface-100 last:border-0">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-surface-900 truncate">{doc.display_name}</p>
-                      <p className="text-xs text-surface-500">
-                        {DOCUMENT_TYPE_LABELS[doc.document_type as DocumentType] || doc.document_type}
-                      </p>
-                    </div>
+                    <p className="text-sm font-medium text-surface-900 min-w-0 flex-1">
+                      {DOCUMENT_TYPE_LABELS[doc.document_type as DocumentType] || doc.document_type}
+                    </p>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <button
                         onClick={() => handleDocumentDownload(doc.storage_path, doc.display_name)}
