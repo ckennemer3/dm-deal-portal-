@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { DealStatus, DealType } from '@/lib/types';
+import { DealStatus, DealType, UserRole } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -15,6 +15,7 @@ import {
 
 interface SubmittedDealsQueueProps {
   deals: any[];
+  viewerRole: UserRole;
 }
 
 function getFinancingAmount(deal: any): number | null {
@@ -47,7 +48,10 @@ function formatShortDate(dateStr: string): string {
   });
 }
 
-export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
+export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueueProps) {
+  // Managers see the underwriter name; underwriters see the manager name
+  const showPersonColumn = viewerRole === 'manager' || viewerRole === 'underwriter' || viewerRole === 'executive' || viewerRole === 'administrator';
+  const personColumnLabel = viewerRole === 'underwriter' ? 'Manager' : 'Underwriter';
   const router = useRouter();
 
   if (deals.length === 0) {
@@ -69,6 +73,9 @@ export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
                 <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[100px]">Payment</th>
                 <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[110px]">Retail LTV</th>
                 <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[120px]">Wholesale LTV</th>
+                {showPersonColumn && (
+                  <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">{personColumnLabel}</th>
+                )}
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Status</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Age</th>
               </tr>
@@ -114,6 +121,19 @@ export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
                     <td className={`px-4 py-3 text-sm font-medium text-center tabular-nums ${getLTVColor(wholesaleLTV)}`}>
                       {formatPercentage(wholesaleLTV)}
                     </td>
+                    {showPersonColumn && (() => {
+                      const person = viewerRole === 'underwriter'
+                        ? deal.manager_user
+                        : deal.underwriter_user;
+                      const name = person
+                        ? toTitleCase(`${person.first_name} ${person.last_name}`)
+                        : '—';
+                      return (
+                        <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
+                          {name}
+                        </td>
+                      );
+                    })()}
                     <td className="px-4 py-3">
                       <StatusBadge status={deal.status as DealStatus} />
                     </td>

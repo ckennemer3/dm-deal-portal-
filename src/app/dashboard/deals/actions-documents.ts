@@ -134,17 +134,19 @@ export async function deleteDocument(documentId: string) {
   return { success: true };
 }
 
-export async function getDocumentSignedUrl(storagePath: string, displayName?: string) {
+export async function getDocumentSignedUrl(storagePath: string, displayName?: string, mode: 'view' | 'download' = 'download') {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  const options = mode === 'download'
+    ? { download: displayName || true }
+    : {};
+
   const { data, error } = await supabase.storage
     .from('deal-documents')
-    .createSignedUrl(storagePath, 3600, {
-      download: displayName || true,
-    });
+    .createSignedUrl(storagePath, 3600, options);
 
-  if (error) throw new Error('Failed to generate download URL');
+  if (error) throw new Error(`Failed to generate ${mode} URL`);
   return { url: data.signedUrl };
 }

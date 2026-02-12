@@ -408,9 +408,18 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
     }
   };
 
+  const handleDocumentView = async (storagePath: string) => {
+    try {
+      const { url } = await getDocumentSignedUrl(storagePath, undefined, 'view');
+      window.open(url, '_blank');
+    } catch {
+      // Silently fail — could show a toast in future
+    }
+  };
+
   const handleDocumentDownload = async (storagePath: string, displayName?: string) => {
     try {
-      const { url } = await getDocumentSignedUrl(storagePath, displayName);
+      const { url } = await getDocumentSignedUrl(storagePath, displayName, 'download');
       window.open(url, '_blank');
     } catch {
       // Silently fail — could show a toast in future
@@ -709,10 +718,16 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
                     </p>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <button
-                        onClick={() => handleDocumentDownload(doc.storage_path, doc.display_name)}
+                        onClick={() => handleDocumentView(doc.storage_path)}
                         className="text-xs text-brand-600 hover:text-brand-700 font-medium"
                       >
                         View
+                      </button>
+                      <button
+                        onClick={() => handleDocumentDownload(doc.storage_path, doc.display_name)}
+                        className="text-xs text-surface-500 hover:text-surface-700 font-medium"
+                      >
+                        Download
                       </button>
                       {canDeleteDocuments(user, deal) && (
                         <button
@@ -784,7 +799,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
                 <span className="text-surface-500">Manager</span>
                 <span className="font-medium">{deal.manager?.first_name} {deal.manager?.last_name}</span>
               </div>
-              {deal.underwriter && (
+              {deal.underwriter && user.role !== 'agent' && (
                 <div className="flex justify-between">
                   <span className="text-surface-500">Underwriter</span>
                   <span className="font-medium">{deal.underwriter?.first_name} {deal.underwriter?.last_name}</span>
