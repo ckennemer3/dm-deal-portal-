@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { UserRole, DealStatus } from '@/lib/types';
 import { DEAL_STATUS_CONFIG, ROLE_LABELS } from '@/lib/constants';
@@ -133,6 +134,13 @@ export default async function DashboardPage() {
 
   if (!userProfile) redirect('/auth/login');
 
+  // Read effective role from cookie (admin "View As" feature)
+  const cookieStore = await cookies();
+  const viewAsRole = cookieStore.get('viewAsRole')?.value as UserRole | undefined;
+  const effectiveRole: UserRole = (userProfile.role === 'administrator' && viewAsRole)
+    ? viewAsRole
+    : userProfile.role as UserRole;
+
   // --- Stat queries (run in parallel) ---
 
   // 1. Total active deals (not completed or cancelled)
@@ -141,7 +149,7 @@ export default async function DashboardPage() {
     .select('id', { count: 'exact', head: true })
     .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`);
 
-  if (userProfile.role === 'agent') {
+  if (effectiveRole === 'agent') {
     activeDealsQuery = activeDealsQuery.eq('submitted_by', authUser.id);
   }
 
@@ -151,7 +159,7 @@ export default async function DashboardPage() {
     .select('id', { count: 'exact', head: true })
     .in('status', AWAITING_ACTION_STATUSES);
 
-  if (userProfile.role === 'agent') {
+  if (effectiveRole === 'agent') {
     awaitingQuery = awaitingQuery.eq('submitted_by', authUser.id);
   }
 
@@ -166,7 +174,7 @@ export default async function DashboardPage() {
     .eq('status', 'signed_and_delivered')
     .gte('updated_at', startOfMonth.toISOString());
 
-  if (userProfile.role === 'agent') {
+  if (effectiveRole === 'agent') {
     completedQuery = completedQuery.eq('submitted_by', authUser.id);
   }
 
@@ -177,7 +185,7 @@ export default async function DashboardPage() {
     .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
     .limit(200);
 
-  if (userProfile.role === 'agent') {
+  if (effectiveRole === 'agent') {
     avgTimeQuery = avgTimeQuery.eq('submitted_by', authUser.id);
   }
 
@@ -197,18 +205,21 @@ export default async function DashboardPage() {
     .order('changed_at', { ascending: false })
     .limit(5);
 
-  // 6. Submitted deals queue (agent only) — all non-terminal deals for this agent
-  const submittedDealsQuery = userProfile.role === 'agent'
-    ? supabase
-        .from('deals')
-        .select(`
-          *,
-          applicants:deal_applicants(first_name, last_name, applicant_number, experian_score)
-        `)
-        .eq('submitted_by', authUser.id)
-        .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
-        .order('created_at', { ascending: false })
-    : null;
+  // 6. Deals queue — all non-terminal deals (agents see only their own)
+  let submittedDealsQueryBuilder = supabase
+    .from('deals')
+    .select(`
+      *,
+      applicants:deal_applicants(first_name, last_name, applicant_number, experian_score)
+    `)
+    .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
+    .order('created_at', { ascending: false });
+
+  if (effectiveRole === 'agent') {
+    submittedDealsQueryBuilder = submittedDealsQueryBuilder.eq('submitted_by', authUser.id);
+  }
+
+  const submittedDealsQuery = submittedDealsQueryBuilder;
 
   // Run all queries in parallel
   const [
@@ -224,7 +235,7 @@ export default async function DashboardPage() {
     completedQuery,
     avgTimeQuery,
     activityQuery,
-    submittedDealsQuery ?? Promise.resolve({ data: null }),
+    submittedDealsQuery,
   ]);
 
   const totalActiveDeals = activeDealsResult.count ?? 0;
@@ -246,7 +257,7 @@ export default async function DashboardPage() {
   const submittedDeals = submittedDealsResult.data ?? [];
 
   // Quick actions for this role
-  const quickActions = getQuickActions(userProfile.role as UserRole);
+  const quickActions = getQuickActions(effectiveRole);
 
   // Greeting based on time of day
   const hour = new Date().getHours();
@@ -264,8 +275,8 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* Submitted Deals Queue (agent only) */}
-      {userProfile.role === 'agent' && submittedDeals.length > 0 && (
+      {/* Active Deals Queue */}
+      {submittedDeals.length > 0 && (
         <SubmittedDealsQueue deals={submittedDeals} />
       )}
 
@@ -446,7 +457,7 @@ export default async function DashboardPage() {
       {/* Role badge footer */}
       <div className="flex items-center justify-center py-4">
         <span className="text-xs text-surface-400">
-          Signed in as {ROLE_LABELS[userProfile.role as UserRole]}
+          Signed in as {ROLE_LABELS[effectiveRole]}
           {userProfile.team?.name && (
             <> &mdash; {userProfile.team.office?.name}, {userProfile.team.name}</>
           )}

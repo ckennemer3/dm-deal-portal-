@@ -114,10 +114,19 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
   const handleRoleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newRole = e.target.value as UserRole;
     onRoleChange?.(newRole);
+    // Set cookie so server components can read the effective role
+    if (newRole === user.role) {
+      document.cookie = 'viewAsRole=; path=/; max-age=0';
+    } else {
+      document.cookie = `viewAsRole=${newRole}; path=/; max-age=86400`;
+    }
+    router.refresh();
   };
 
   const handleResetRole = () => {
     onRoleChange?.(null);
+    document.cookie = 'viewAsRole=; path=/; max-age=0';
+    router.refresh();
   };
 
   return (
