@@ -11,23 +11,23 @@ export async function uploadDocument(
   documentType: string,
   applicantId: string | null,
   formData: FormData
-) {
+): Promise<{ success: true; path: string } | { success: false; error: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
+  if (!user) return { success: false, error: 'Not authenticated' };
 
   const file = formData.get('file') as File;
-  if (!file) throw new Error('No file provided');
+  if (!file) return { success: false, error: 'No file provided' };
 
   // Validate file type
   const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
   if (!allowedTypes.includes(file.type)) {
-    throw new Error('Invalid file type. Allowed: PDF, JPG, PNG, DOC, DOCX');
+    return { success: false, error: 'Invalid file type. Allowed: PDF, JPG, PNG, DOC, DOCX' };
   }
 
   // Max 10MB
   if (file.size > 10 * 1024 * 1024) {
-    throw new Error('File too large. Maximum size is 10MB.');
+    return { success: false, error: 'File too large. Maximum size is 10MB.' };
   }
 
   // Generate storage path
@@ -62,20 +62,20 @@ export async function uploadDocument(
   }
 
   // Upload to Supabase Storage
-  const { error: uploadError } = await supabase.storage
+  const { error: storageError } = await supabase.storage
     .from('deal-documents')
     .upload(storagePath, file, {
       cacheControl: '3600',
       upsert: false,
     });
 
-  if (uploadError) {
-    logger.error('Document upload failed', new Error(uploadError.message), {
+  if (storageError) {
+    logger.error('Document upload failed', new Error(storageError.message), {
       dealId,
       documentType,
       userId: user.id,
     });
-    throw new Error('Failed to upload document. Please try again.');
+    return { success: false, error: `Storage upload failed: ${storageError.message}` };
   }
 
   // Create document record
@@ -97,7 +97,7 @@ export async function uploadDocument(
       documentType,
       userId: user.id,
     });
-    throw new Error('Failed to save document record.');
+    return { success: false, error: `Database record failed: ${dbError.message}` };
   }
 
   logger.trackAction('document_uploaded', {

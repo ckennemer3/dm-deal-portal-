@@ -197,9 +197,11 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
           try {
             const fd = new FormData();
             fd.append('file', file);
-            await uploadDocument(dealId, docType, null, fd);
+            const uploadResult = await uploadDocument(dealId, docType, null, fd);
+            if (!uploadResult.success) {
+              console.error(`Failed to upload ${docType}:`, uploadResult.error);
+            }
           } catch (uploadErr) {
-            // Log but don't block — documents can be re-uploaded from deal detail
             console.error(`Failed to upload ${docType}:`, uploadErr);
           }
         }

@@ -395,7 +395,11 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      await uploadDocument(deal.id, uploadDocType, null, fd);
+      const result = await uploadDocument(deal.id, uploadDocType, null, fd);
+      if (!result.success) {
+        setUploadError(result.error);
+        return;
+      }
       router.refresh();
     } catch (err: any) {
       setUploadError(err.message || 'Failed to upload document');
