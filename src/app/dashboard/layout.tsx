@@ -14,7 +14,8 @@ export default async function DashboardLayout({
     redirect('/auth/login');
   }
 
-  const { data: userProfile, error: profileError } = await supabase
+  // Try full query with office FK join first
+  let { data: userProfile, error: profileError } = await supabase
     .from('users')
     .select(`
       *,
@@ -23,6 +24,19 @@ export default async function DashboardLayout({
     `)
     .eq('id', authUser.id)
     .single();
+
+  // Fallback: if query fails (e.g. corrupted primary_office_id), retry without office FK join
+  if (profileError && !userProfile) {
+    console.warn('Full user profile query failed, retrying without office join:', profileError.message);
+    ({ data: userProfile } = await supabase
+      .from('users')
+      .select(`
+        *,
+        team:teams!users_team_id_fkey(*, office:offices(*))
+      `)
+      .eq('id', authUser.id)
+      .single());
+  }
 
   if (!userProfile) {
     console.error('Failed to load user profile:', profileError);
