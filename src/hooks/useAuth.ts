@@ -21,7 +21,7 @@ export function useAuth() {
         .from('users')
         .select(`
           *,
-          team:teams(*, office:offices(*)),
+          team:teams!users_team_id_fkey(*, office:offices(*)),
           office:offices(*)
         `)
         .eq('id', authUser.id)

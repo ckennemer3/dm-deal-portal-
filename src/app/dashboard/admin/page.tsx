@@ -19,7 +19,7 @@ export default async function AdminPage() {
 
   const { data: users } = await supabase
     .from('users')
-    .select('*, team:teams(*, office:offices(*)), office:offices(*)')
+    .select('*, team:teams!users_team_id_fkey(*, office:offices(*)), office:offices(*)')
     .order('last_name');
 
   const { data: offices } = await supabase

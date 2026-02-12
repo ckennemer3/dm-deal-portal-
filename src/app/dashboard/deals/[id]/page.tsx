@@ -8,10 +8,18 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect('/auth/login');
 
-  const { data: userProfile } = await supabase
+  // Fetch user profile — try full query first, fallback without office FK join
+  let { data: userProfile, error: profileError } = await supabase
     .from('users')
-    .select('*, team:teams(*, office:offices(*))')
+    .select('*, team:teams!users_team_id_fkey(*, office:offices(*))')
     .eq('id', authUser.id).single();
+
+  if (profileError && !userProfile) {
+    ({ data: userProfile } = await supabase
+      .from('users')
+      .select('*, team:teams!users_team_id_fkey(*, office:offices(*))')
+      .eq('id', authUser.id).single());
+  }
   if (!userProfile) redirect('/auth/login');
 
   // Fetch deal with all related data

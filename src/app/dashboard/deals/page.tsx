@@ -9,7 +9,7 @@ export default async function DealsPage() {
 
   const { data: userProfile } = await supabase
     .from('users')
-    .select('*, team:teams(*, office:offices(*))').eq('id', authUser.id).single();
+    .select('*, team:teams!users_team_id_fkey(*, office:offices(*))').eq('id', authUser.id).single();
   if (!userProfile) redirect('/auth/login');
 
   let query = supabase

@@ -29,7 +29,7 @@ export class SupabaseAuthService implements AuthServiceInterface {
       .from('users')
       .select(`
         *,
-        team:teams(*, office:offices(*)),
+        team:teams!users_team_id_fkey(*, office:offices(*)),
         office:offices(*)
       `)
       .eq('id', authUser.id)
@@ -75,7 +75,7 @@ export class SupabaseAuthService implements AuthServiceInterface {
       .from('users')
       .select(`
         *,
-        team:teams(*, office:offices(*)),
+        team:teams!users_team_id_fkey(*, office:offices(*)),
         office:offices(*)
       `)
       .eq('id', id)
@@ -108,7 +108,7 @@ export class SupabaseAuthService implements AuthServiceInterface {
       .from('users')
       .select(`
         *,
-        team:teams(*, office:offices(*)),
+        team:teams!users_team_id_fkey(*, office:offices(*)),
         office:offices(*)
       `)
       .order('last_name');
