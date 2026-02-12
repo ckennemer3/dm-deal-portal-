@@ -100,8 +100,9 @@ export function canUploadDocuments(user: User, deal: Deal): boolean {
 
 export function canDeleteDocuments(user: User, deal: Deal): boolean {
   switch (user.role) {
+    case 'agent':
+      return deal.submitted_by === user.id;
     case 'manager':
-      return true;
     case 'administrator':
       return true;
     default:

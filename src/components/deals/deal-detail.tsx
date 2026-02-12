@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
-import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired } from '@/lib/permissions';
+import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments } from '@/lib/permissions';
 import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
@@ -500,35 +500,6 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
         </div>
       </div>
 
-      {/* Latest Comment */}
-      {(() => {
-        const sorted = [...(deal.messages || [])].sort(
-          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        const latest = sorted[0];
-        if (!latest) return null;
-        const senderName = latest.sender
-          ? `${latest.sender.first_name} ${latest.sender.last_name}`
-          : 'Unknown';
-        const isAction = latest.message_type === 'action_required';
-        return (
-          <div className={`rounded-lg px-4 py-3 text-sm ${
-            isAction
-              ? 'bg-amber-50 border border-amber-200'
-              : 'bg-surface-50 border border-surface-200'
-          }`}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-surface-900">{senderName}</span>
-              {isAction && (
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Required</span>
-              )}
-              <span className="text-xs text-surface-400 ml-auto">{formatTimestamp(latest.created_at)}</span>
-            </div>
-            <p className="text-surface-700">{latest.content}</p>
-          </div>
-        );
-      })()}
-
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left: Deal Info */}
@@ -733,27 +704,38 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
               ) : (
                 deal.documents.map((doc: any) => (
                   <div key={doc.id} className="flex items-center justify-between py-2 border-b border-surface-100 last:border-0">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-surface-900 truncate">{doc.display_name}</p>
                       <p className="text-xs text-surface-500">
                         {DOCUMENT_TYPE_LABELS[doc.document_type as DocumentType] || doc.document_type}
-                        {' '}&mdash;{' '}
-                        Uploaded by {doc.uploader?.first_name} {doc.uploader?.last_name} &mdash; {formatTimestamp(doc.uploaded_at)}
                       </p>
                     </div>
-                    <button
-                      onClick={() => handleDocumentDownload(doc.storage_path, doc.display_name)}
-                      className="text-xs text-brand-600 hover:text-brand-700 font-medium flex-shrink-0 ml-2"
-                    >
-                      Download
-                    </button>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <button
+                        onClick={() => handleDocumentDownload(doc.storage_path, doc.display_name)}
+                        className="text-xs text-brand-600 hover:text-brand-700 font-medium"
+                      >
+                        View
+                      </button>
+                      {canDeleteDocuments(user, deal) && (
+                        <button
+                          onClick={() => handleDocumentDelete(doc.id)}
+                          className="text-xs text-surface-400 hover:text-status-danger font-medium"
+                          title="Remove document"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
             </div>
 
-            {/* Upload section */}
-            {isActiveDeal && (
+            {/* Upload section — agents (own deals), managers, admins */}
+            {isActiveDeal && canUploadDocuments(user, deal) && (
               <div className="mt-4 pt-4 border-t border-surface-100">
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
@@ -824,6 +806,35 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
           />
         </div>
       </div>
+
+      {/* Latest Comment — visible to all roles */}
+      {(() => {
+        const sorted = [...(deal.messages || [])].sort(
+          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const latest = sorted[0];
+        if (!latest) return null;
+        const senderName = latest.sender
+          ? `${latest.sender.first_name} ${latest.sender.last_name}`
+          : 'Unknown';
+        const isAction = latest.message_type === 'action_required';
+        return (
+          <div className={`rounded-lg px-4 py-3 text-sm ${
+            isAction
+              ? 'bg-amber-50 border border-amber-200'
+              : 'bg-surface-50 border border-surface-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-surface-700 text-xs uppercase tracking-wide">Latest Note</span>
+              {isAction && (
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Required</span>
+              )}
+              <span className="text-xs text-surface-400 ml-auto">{senderName} &mdash; {formatTimestamp(latest.created_at)}</span>
+            </div>
+            <p className="text-surface-700">{latest.content}</p>
+          </div>
+        );
+      })()}
 
       {/* Kickback Modal */}
       <Modal
