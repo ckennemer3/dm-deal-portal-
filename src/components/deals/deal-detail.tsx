@@ -500,6 +500,35 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
         </div>
       </div>
 
+      {/* Latest Comment */}
+      {(() => {
+        const sorted = [...(deal.messages || [])].sort(
+          (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const latest = sorted[0];
+        if (!latest) return null;
+        const senderName = latest.sender
+          ? `${latest.sender.first_name} ${latest.sender.last_name}`
+          : 'Unknown';
+        const isAction = latest.message_type === 'action_required';
+        return (
+          <div className={`rounded-lg px-4 py-3 text-sm ${
+            isAction
+              ? 'bg-amber-50 border border-amber-200'
+              : 'bg-surface-50 border border-surface-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium text-surface-900">{senderName}</span>
+              {isAction && (
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Required</span>
+              )}
+              <span className="text-xs text-surface-400 ml-auto">{formatTimestamp(latest.created_at)}</span>
+            </div>
+            <p className="text-surface-700">{latest.content}</p>
+          </div>
+        );
+      })()}
+
       {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left: Deal Info */}
