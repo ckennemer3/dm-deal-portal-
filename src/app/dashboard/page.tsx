@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { UserRole, DealStatus } from '@/lib/types';
-import { DEAL_STATUS_CONFIG, ROLE_LABELS } from '@/lib/constants';
-import { formatRelativeTime, formatDuration } from '@/lib/utils';
+import { ROLE_LABELS } from '@/lib/constants';
+import { formatDuration } from '@/lib/utils';
 import { SubmittedDealsQueue } from '@/components/dashboard/submitted-deals-queue';
 
 // --- Helper: role-specific quick actions ---
@@ -189,23 +189,7 @@ export default async function DashboardPage() {
     avgTimeQuery = avgTimeQuery.eq('submitted_by', authUser.id);
   }
 
-  // 5. Recent activity feed (last 5 status changes)
-  let activityQuery = supabase
-    .from('deal_status_history')
-    .select(`
-      id,
-      deal_id,
-      from_status,
-      to_status,
-      changed_at,
-      notes,
-      changer:users!deal_status_history_changed_by_fkey(first_name, last_name),
-      deal:deals!deal_status_history_deal_id_fkey(deal_number)
-    `)
-    .order('changed_at', { ascending: false })
-    .limit(5);
-
-  // 6. Deals queue — all non-terminal deals (agents see only their own)
+  // 5. Deals queue — all non-terminal deals (agents see only their own)
   let submittedDealsQueryBuilder = supabase
     .from('deals')
     .select(`
@@ -227,14 +211,12 @@ export default async function DashboardPage() {
     awaitingResult,
     completedResult,
     avgTimeResult,
-    activityResult,
     submittedDealsResult,
   ] = await Promise.all([
     activeDealsQuery,
     awaitingQuery,
     completedQuery,
     avgTimeQuery,
-    activityQuery,
     submittedDealsQuery,
   ]);
 
@@ -253,7 +235,6 @@ export default async function DashboardPage() {
     avgTimeInStatus = totalMs / activeDealsData.length;
   }
 
-  const recentActivity = activityResult.data ?? [];
   const submittedDeals = submittedDealsResult.data ?? [];
 
   // Quick actions for this role
@@ -373,85 +354,17 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity Feed */}
-      <div>
-        <h2 className="text-lg font-semibold text-surface-900 mb-4">Recent Activity</h2>
-        <div className="card p-0">
-          {recentActivity.length === 0 ? (
-            <div className="py-12 text-center">
-              <svg className="w-12 h-12 text-surface-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm font-medium text-surface-500">No recent activity</p>
-              <p className="text-xs text-surface-400 mt-1">Status changes will appear here as deals progress.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-surface-200">
-              {recentActivity.map((entry: any) => {
-                const toConfig = DEAL_STATUS_CONFIG[entry.to_status as DealStatus];
-                const fromConfig = entry.from_status
-                  ? DEAL_STATUS_CONFIG[entry.from_status as DealStatus]
-                  : null;
-                const changerName = entry.changer
-                  ? `${entry.changer.first_name} ${entry.changer.last_name}`
-                  : 'System';
-                const dealNumber = entry.deal?.deal_number ?? 'Unknown';
-
-                return (
-                  <Link
-                    key={entry.id}
-                    href={`/dashboard/deals/${entry.deal_id}`}
-                    className="flex items-start gap-4 px-6 py-4 hover:bg-surface-50 transition-colors"
-                  >
-                    {/* Status dot */}
-                    <div className="mt-1.5 flex-shrink-0">
-                      <div className={`w-2.5 h-2.5 rounded-full ${toConfig?.bgColor ?? 'bg-surface-200'}`} style={{
-                        backgroundColor: entry.to_status === 'signed_and_delivered' || entry.to_status === 'approved' ? 'rgb(34 197 94)' :
-                          entry.to_status === 'cancelled' ? 'rgb(156 163 175)' :
-                          entry.to_status === 'kicked_back_to_sales' ? 'rgb(245 158 11)' :
-                          'rgb(59 130 246)',
-                      }} />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-surface-900">
-                        <span className="font-medium">{changerName}</span>
-                        {' '}moved{' '}
-                        <span className="font-medium">{dealNumber}</span>
-                        {fromConfig && (
-                          <>
-                            {' '}from{' '}
-                            <span className={`inline-flex items-center badge text-xs ${fromConfig.bgColor} ${fromConfig.color}`}>
-                              {fromConfig.label}
-                            </span>
-                          </>
-                        )}
-                        {' '}to{' '}
-                        <span className={`inline-flex items-center badge text-xs ${toConfig?.bgColor ?? ''} ${toConfig?.color ?? ''}`}>
-                          {toConfig?.label ?? entry.to_status}
-                        </span>
-                      </p>
-                      {entry.notes && (
-                        <p className="text-xs text-surface-500 mt-1 truncate">{entry.notes}</p>
-                      )}
-                      <p className="text-xs text-surface-400 mt-1">
-                        {formatRelativeTime(entry.changed_at)}
-                      </p>
-                    </div>
-
-                    {/* Arrow */}
-                    <div className="flex-shrink-0 mt-1">
-                      <svg className="w-4 h-4 text-surface-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                      </svg>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+      {/* Recent Activity — placeholder link to future activity page */}
+      <div className="flex justify-center">
+        <Link
+          href="/dashboard/activity"
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-surface-600 bg-white border border-surface-200 rounded-lg hover:bg-surface-50 hover:border-surface-300 transition-all"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          View Recent Activity
+        </Link>
       </div>
 
       {/* Role badge footer */}
