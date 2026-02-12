@@ -83,6 +83,7 @@ function EditableField({
   canEdit,
   onSaved,
   type = 'text',
+  sectionEditing = false,
 }: {
   fieldName: string;
   label: string;
@@ -91,36 +92,45 @@ function EditableField({
   canEdit: boolean;
   onSaved: () => void;
   type?: 'text' | 'currency' | 'number' | 'textarea';
+  sectionEditing?: boolean;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [localEditing, setLocalEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   const displayValue = formatFieldValue(fieldName, value);
   const rawValue = value != null ? String(value) : '';
 
+  // When section editing turns on, initialize edit value
+  const isEditing = localEditing || (sectionEditing && canEdit);
+
   const startEdit = () => {
     setEditValue(rawValue);
-    setEditing(true);
+    setLocalEditing(true);
+    setDirty(false);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const cancelEdit = () => {
-    setEditing(false);
+    setLocalEditing(false);
     setEditValue('');
+    setDirty(false);
   };
 
   const saveEdit = async () => {
     const trimmed = editValue.trim();
     if (trimmed === rawValue) {
-      cancelEdit();
+      setLocalEditing(false);
+      setDirty(false);
       return;
     }
     setSaving(true);
     try {
       await updateDealField(dealId, fieldName, rawValue, trimmed);
-      setEditing(false);
+      setLocalEditing(false);
+      setDirty(false);
       onSaved();
     } catch {
       // Keep editing mode open on error
@@ -134,21 +144,28 @@ function EditableField({
       e.preventDefault();
       saveEdit();
     }
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && !sectionEditing) {
       cancelEdit();
     }
   };
 
-  if (editing) {
+  const handleChange = (val: string) => {
+    setEditValue(val);
+    setDirty(val.trim() !== rawValue);
+  };
+
+  if (isEditing) {
+    // Use the current editValue if user has typed, otherwise initialize from raw
+    const currentVal = (localEditing || dirty) ? editValue : rawValue;
     return (
       <div>
-        <span className="text-surface-500">{label}:</span>
-        <div className="mt-1 flex items-center gap-2">
+        <span className="text-surface-500 text-xs">{label}</span>
+        <div className="mt-0.5 flex items-center gap-1.5">
           {type === 'textarea' ? (
             <textarea
               ref={inputRef as React.Ref<HTMLTextAreaElement>}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              value={currentVal}
+              onChange={(e) => handleChange(e.target.value)}
               onKeyDown={handleKeyDown}
               rows={3}
               className="input-base text-sm flex-1"
@@ -157,26 +174,23 @@ function EditableField({
             <input
               ref={inputRef as React.Ref<HTMLInputElement>}
               type={type === 'currency' || type === 'number' ? 'number' : 'text'}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
+              value={currentVal}
+              onChange={(e) => handleChange(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => { if (!dirty && !localEditing) { setEditValue(rawValue); setLocalEditing(true); } }}
               step={type === 'currency' ? '0.01' : undefined}
               className="input-base text-sm flex-1"
             />
           )}
-          <button
-            onClick={saveEdit}
-            disabled={saving}
-            className="text-xs font-medium text-white bg-brand-600 hover:bg-brand-700 px-2 py-1 rounded disabled:opacity-50"
-          >
-            {saving ? '...' : 'Save'}
-          </button>
-          <button
-            onClick={cancelEdit}
-            className="text-xs font-medium text-surface-600 hover:text-surface-800 px-2 py-1"
-          >
-            Cancel
-          </button>
+          {dirty && (
+            <button
+              onClick={saveEdit}
+              disabled={saving}
+              className="text-xs font-medium text-white bg-brand-600 hover:bg-brand-700 px-2 py-1 rounded disabled:opacity-50 flex-shrink-0"
+            >
+              {saving ? '...' : 'Save'}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -201,6 +215,27 @@ function EditableField({
   );
 }
 
+// Edit button for card headers — pencil icon toggles section editing
+function SectionEditButton({ editing, onClick }: { editing: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-xs font-medium px-2.5 py-1 rounded transition-colors ${
+        editing
+          ? 'text-brand-700 bg-brand-50 hover:bg-brand-100'
+          : 'text-surface-400 hover:text-brand-600 hover:bg-surface-50'
+      }`}
+      title={editing ? 'Done editing' : 'Edit section'}
+    >
+      {editing ? 'Done' : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 
 export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const router = useRouter();
@@ -214,6 +249,10 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
   const [uploadDocType, setUploadDocType] = useState<string>('other');
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Section-level editing state
+  const [editingVehicle, setEditingVehicle] = useState(false);
+  const [editingStrengths, setEditingStrengths] = useState(false);
 
   const primaryApplicant = deal.applicants?.find((a: any) => a.applicant_number === 1);
   const clientName = primaryApplicant ? getFullName(primaryApplicant.first_name, primaryApplicant.last_name) : 'Unknown';
@@ -550,38 +589,41 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
 
           {/* Vehicle */}
           <Card padding="md">
-            <CardHeader title="Vehicle Information" />
+            <CardHeader
+              title="Vehicle Information"
+              action={canEdit ? <SectionEditButton editing={editingVehicle} onClick={() => setEditingVehicle(!editingVehicle)} /> : undefined}
+            />
             <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-              <EditableField fieldName="vehicle_condition" label="Condition" value={deal.vehicle_condition} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} />
-              <EditableField fieldName="vehicle_year" label="Year" value={deal.vehicle_year} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} />
-              <EditableField fieldName="vehicle_make" label="Make" value={deal.vehicle_make} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} />
-              <EditableField fieldName="vehicle_model" label="Model" value={deal.vehicle_model} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} />
-              <EditableField fieldName="vehicle_trim" label="Trim" value={deal.vehicle_trim} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} />
-              {deal.vehicle_mileage != null && (
-                <EditableField fieldName="vehicle_mileage" label="Mileage" value={deal.vehicle_mileage} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="number" />
+              <EditableField fieldName="vehicle_condition" label="Condition" value={deal.vehicle_condition} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} sectionEditing={editingVehicle} />
+              <EditableField fieldName="vehicle_year" label="Year" value={deal.vehicle_year} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} sectionEditing={editingVehicle} />
+              <EditableField fieldName="vehicle_make" label="Make" value={deal.vehicle_make} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} sectionEditing={editingVehicle} />
+              <EditableField fieldName="vehicle_model" label="Model" value={deal.vehicle_model} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} sectionEditing={editingVehicle} />
+              <EditableField fieldName="vehicle_trim" label="Trim" value={deal.vehicle_trim} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} sectionEditing={editingVehicle} />
+              {(deal.vehicle_mileage != null || editingVehicle) && (
+                <EditableField fieldName="vehicle_mileage" label="Mileage" value={deal.vehicle_mileage} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="number" sectionEditing={editingVehicle} />
               )}
-              {deal.msrp != null && (
-                <EditableField fieldName="msrp" label="MSRP" value={deal.msrp} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              {(deal.msrp != null || editingVehicle) && (
+                <EditableField fieldName="msrp" label="MSRP" value={deal.msrp} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
               )}
-              {deal.invoice != null && (
-                <EditableField fieldName="invoice" label="Invoice" value={deal.invoice} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              {(deal.invoice != null || editingVehicle) && (
+                <EditableField fieldName="invoice" label="Invoice" value={deal.invoice} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
               )}
-              {deal.jd_power_retail != null && (
-                <EditableField fieldName="jd_power_retail" label="JD Retail" value={deal.jd_power_retail} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              {(deal.jd_power_retail != null || editingVehicle) && (
+                <EditableField fieldName="jd_power_retail" label="JD Retail" value={deal.jd_power_retail} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
               )}
-              {deal.jd_power_wholesale != null && (
-                <EditableField fieldName="jd_power_wholesale" label="JD Wholesale" value={deal.jd_power_wholesale} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              {(deal.jd_power_wholesale != null || editingVehicle) && (
+                <EditableField fieldName="jd_power_wholesale" label="JD Wholesale" value={deal.jd_power_wholesale} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
               )}
-              {deal.net_cap_cost != null && (
-                <EditableField fieldName="net_cap_cost" label="Net Cap Cost" value={deal.net_cap_cost} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              {(deal.net_cap_cost != null || editingVehicle) && (
+                <EditableField fieldName="net_cap_cost" label="Net Cap Cost" value={deal.net_cap_cost} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
               )}
-              {deal.total_amount_financed != null && (
-                <EditableField fieldName="total_amount_financed" label="Amount Financed" value={deal.total_amount_financed} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              {(deal.total_amount_financed != null || editingVehicle) && (
+                <EditableField fieldName="total_amount_financed" label="Amount Financed" value={deal.total_amount_financed} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
               )}
-              {deal.term != null && (
-                <EditableField fieldName="term" label="Term (months)" value={deal.term} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="text" />
+              {(deal.term != null || editingVehicle) && (
+                <EditableField fieldName="term" label="Term (months)" value={deal.term} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="text" sectionEditing={editingVehicle} />
               )}
-              <EditableField fieldName="monthly_payment" label="Monthly Payment" value={deal.monthly_payment} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" />
+              <EditableField fieldName="monthly_payment" label="Monthly Payment" value={deal.monthly_payment} dealId={deal.id} canEdit={canEdit} onSaved={refreshPage} type="currency" sectionEditing={editingVehicle} />
             </div>
 
             {/* LTV Calculations */}
@@ -649,7 +691,10 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
 
           {/* Deal Strengths */}
           <Card padding="md">
-            <CardHeader title="Deal Strengths & Credit" />
+            <CardHeader
+              title="Deal Strengths & Credit"
+              action={canEdit ? <SectionEditButton editing={editingStrengths} onClick={() => setEditingStrengths(!editingStrengths)} /> : undefined}
+            />
             <div className="mt-4 space-y-4 text-sm">
               <EditableField
                 fieldName="deal_strengths"
@@ -659,8 +704,9 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
                 canEdit={canEdit}
                 onSaved={refreshPage}
                 type="textarea"
+                sectionEditing={editingStrengths}
               />
-              {deal.has_derogatory_credit && deal.derogatory_credit_explanation && (
+              {(deal.has_derogatory_credit && deal.derogatory_credit_explanation) && (
                 <EditableField
                   fieldName="derogatory_credit_explanation"
                   label="Derogatory Credit Explanation"
@@ -669,6 +715,7 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
                   canEdit={canEdit}
                   onSaved={refreshPage}
                   type="textarea"
+                  sectionEditing={editingStrengths}
                 />
               )}
             </div>

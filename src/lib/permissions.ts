@@ -55,7 +55,7 @@ export function canEditDealFields(user: User, deal: Deal): boolean {
       return deal.submitted_by === user.id &&
         (deal.status === 'kicked_back_to_sales' || deal.status === 'pending');
     case 'manager':
-      return deal.status === 'pending_manager_review';
+      return deal.status !== 'signed_and_delivered' && deal.status !== 'cancelled';
     case 'administrator':
       return true;
     default:
