@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { UserWithRelations, DealStatus, DealType } from '@/lib/types';
 import { DEAL_STATUS_CONFIG, DEAL_TYPE_LABELS } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ interface DealsListProps {
 }
 
 export function DealsList({ deals, user }: DealsListProps) {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -81,21 +83,23 @@ export function DealsList({ deals, user }: DealsListProps) {
                   const app = deal.applicants?.find((a: any) => a.applicant_number === 1);
                   const clientName = app ? `${app.first_name} ${app.last_name}` : 'Unknown';
                   return (
-                    <Link key={deal.id} href={`/dashboard/deals/${deal.id}`} className="contents">
-                      <tr className="hover:bg-surface-50 transition-colors cursor-pointer">
-                        <td className="px-6 py-3 text-sm font-medium text-brand-600">
-                          {deal.deal_number}
-                        </td>
-                        <td className="px-6 py-3 text-sm text-surface-900">{clientName}</td>
-                        <td className="px-6 py-3 text-sm text-surface-600">
-                          {deal.vehicle_year} {deal.vehicle_make} {deal.vehicle_model} {deal.vehicle_trim}
-                        </td>
-                        <td className="px-6 py-3 text-sm text-surface-600">{DEAL_TYPE_LABELS[deal.deal_type as DealType]}</td>
-                        <td className="px-6 py-3"><StatusBadge status={deal.status} /></td>
-                        <td className="px-6 py-3 text-sm text-surface-600">{formatDealAge(deal.created_at)}</td>
-                        <td className="px-6 py-3 text-sm text-surface-400">{formatRelativeTime(deal.created_at)}</td>
-                      </tr>
-                    </Link>
+                    <tr
+                      key={deal.id}
+                      onClick={() => router.push(`/dashboard/deals/${deal.id}`)}
+                      className="hover:bg-surface-50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-3 text-sm font-medium text-brand-600">
+                        {deal.deal_number}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-surface-900">{clientName}</td>
+                      <td className="px-6 py-3 text-sm text-surface-600">
+                        {deal.vehicle_year} {deal.vehicle_make} {deal.vehicle_model} {deal.vehicle_trim}
+                      </td>
+                      <td className="px-6 py-3 text-sm text-surface-600">{DEAL_TYPE_LABELS[deal.deal_type as DealType]}</td>
+                      <td className="px-6 py-3"><StatusBadge status={deal.status} /></td>
+                      <td className="px-6 py-3 text-sm text-surface-600">{formatDealAge(deal.created_at)}</td>
+                      <td className="px-6 py-3 text-sm text-surface-400">{formatRelativeTime(deal.created_at)}</td>
+                    </tr>
                   );
                 })}
               </tbody>

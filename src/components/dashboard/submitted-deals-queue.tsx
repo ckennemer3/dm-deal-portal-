@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { DealStatus, DealType } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -33,6 +33,8 @@ function formatShortDate(dateStr: string): string {
 }
 
 export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
+  const router = useRouter();
+
   if (deals.length === 0) {
     return null;
   }
@@ -71,37 +73,39 @@ export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
                 const wholesaleLTV = calculateLTV(financingAmount, deal.jd_power_wholesale);
 
                 return (
-                  <Link key={deal.id} href={`/dashboard/deals/${deal.id}`} className="contents">
-                    <tr className="hover:bg-surface-50 transition-colors cursor-pointer">
-                      <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
-                        {formatShortDate(deal.created_at)}
-                      </td>
-                      <td className="px-4 py-3 text-sm font-medium text-surface-900 whitespace-nowrap">
-                        {clientName}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
-                        {deal.vehicle_year} {deal.vehicle_make} {deal.vehicle_model}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-surface-900 font-medium text-right tabular-nums">
-                        {creditScore ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-surface-900 font-medium text-right tabular-nums whitespace-nowrap">
-                        {formatCurrency(deal.monthly_payment)}
-                      </td>
-                      <td className={`px-4 py-3 text-sm font-medium text-right tabular-nums ${getLTVColor(retailLTV)}`}>
-                        {formatPercentage(retailLTV)}
-                      </td>
-                      <td className={`px-4 py-3 text-sm font-medium text-right tabular-nums ${getLTVColor(wholesaleLTV)}`}>
-                        {formatPercentage(wholesaleLTV)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={deal.status as DealStatus} />
-                      </td>
-                      <td className="px-4 py-3 text-sm text-surface-500 whitespace-nowrap">
-                        {formatDealAge(deal.created_at)}
-                      </td>
-                    </tr>
-                  </Link>
+                  <tr
+                    key={deal.id}
+                    onClick={() => router.push(`/dashboard/deals/${deal.id}`)}
+                    className="hover:bg-surface-50 transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
+                      {formatShortDate(deal.created_at)}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-surface-900 whitespace-nowrap">
+                      {clientName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
+                      {deal.vehicle_year} {deal.vehicle_make} {deal.vehicle_model}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-surface-900 font-medium text-right tabular-nums">
+                      {creditScore ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-surface-900 font-medium text-right tabular-nums whitespace-nowrap">
+                      {formatCurrency(deal.monthly_payment)}
+                    </td>
+                    <td className={`px-4 py-3 text-sm font-medium text-right tabular-nums ${getLTVColor(retailLTV)}`}>
+                      {formatPercentage(retailLTV)}
+                    </td>
+                    <td className={`px-4 py-3 text-sm font-medium text-right tabular-nums ${getLTVColor(wholesaleLTV)}`}>
+                      {formatPercentage(wholesaleLTV)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={deal.status as DealStatus} />
+                    </td>
+                    <td className="px-4 py-3 text-sm text-surface-500 whitespace-nowrap">
+                      {formatDealAge(deal.created_at)}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
