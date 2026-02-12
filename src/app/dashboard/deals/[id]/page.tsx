@@ -13,29 +13,52 @@ export default async function DealDetailPage({ params }: { params: { id: string 
     .eq('id', authUser.id).single();
   if (!userProfile) redirect('/auth/login');
 
+  // Fetch deal with all related data
+  // Use separate queries for user joins to avoid FK constraint name issues
   const { data: deal, error } = await supabase
     .from('deals')
     .select(`
       *,
-      submitter:users!deals_submitted_by_fkey(id, first_name, last_name, email),
-      manager:users!deals_assigned_manager_fkey(id, first_name, last_name, email),
-      underwriter:users!deals_assigned_underwriter_fkey(id, first_name, last_name, email),
       applicants:deal_applicants(*),
       trade_in:deal_trade_ins(*),
       open_autos:deal_open_autos(*),
-      documents:deal_documents(*, uploader:users!deal_documents_uploaded_by_fkey(first_name, last_name)),
-      messages:deal_messages(
-        *,
-        sender:users!deal_messages_sender_id_fkey(id, first_name, last_name, role),
-        views:deal_message_views(*, viewer:users!deal_message_views_viewed_by_fkey(first_name, last_name))
-      ),
-      status_history:deal_status_history(*, changer:users!deal_status_history_changed_by_fkey(first_name, last_name)),
-      field_changes:deal_field_changes(*, changer:users!deal_field_changes_changed_by_fkey(first_name, last_name))
+      documents:deal_documents(*),
+      messages:deal_messages(*),
+      status_history:deal_status_history(*),
+      field_changes:deal_field_changes(*)
     `)
     .eq('id', params.id)
     .single();
 
   if (error || !deal) notFound();
+
+  // Collect all user IDs referenced across the deal and its sub-records
+  const allUserIds = new Set<string>();
+  if (deal.submitted_by) allUserIds.add(deal.submitted_by);
+  if (deal.assigned_manager) allUserIds.add(deal.assigned_manager);
+  if (deal.assigned_underwriter) allUserIds.add(deal.assigned_underwriter);
+  (deal.documents || []).forEach((d: any) => { if (d.uploaded_by) allUserIds.add(d.uploaded_by); });
+  (deal.messages || []).forEach((m: any) => { if (m.sender_id) allUserIds.add(m.sender_id); });
+  (deal.status_history || []).forEach((h: any) => { if (h.changed_by) allUserIds.add(h.changed_by); });
+  (deal.field_changes || []).forEach((f: any) => { if (f.changed_by) allUserIds.add(f.changed_by); });
+
+  // Fetch all referenced users in one query
+  const { data: relatedUsers } = allUserIds.size > 0
+    ? await supabase.from('users').select('id, first_name, last_name, email, role').in('id', Array.from(allUserIds))
+    : { data: [] };
+
+  const usersMap = Object.fromEntries((relatedUsers || []).map(u => [u.id, u]));
+
+  // Attach user data to deal
+  (deal as any).submitter = usersMap[deal.submitted_by] || null;
+  (deal as any).manager = usersMap[deal.assigned_manager] || null;
+  (deal as any).underwriter = deal.assigned_underwriter ? usersMap[deal.assigned_underwriter] || null : null;
+
+  // Attach user data to sub-records
+  (deal.documents || []).forEach((d: any) => { d.uploader = usersMap[d.uploaded_by] || null; });
+  (deal.messages || []).forEach((m: any) => { m.sender = usersMap[m.sender_id] || null; });
+  (deal.status_history || []).forEach((h: any) => { h.changer = usersMap[h.changed_by] || null; });
+  (deal.field_changes || []).forEach((f: any) => { f.changer = usersMap[f.changed_by] || null; });
 
   // Fetch underwriters for reassignment dropdown
   const { data: underwriters } = await supabase

@@ -16,9 +16,6 @@ export default async function DealsPage() {
     .from('deals')
     .select(`
       *,
-      submitter:users!deals_submitted_by_fkey(id, first_name, last_name),
-      manager:users!deals_assigned_manager_fkey(id, first_name, last_name),
-      underwriter:users!deals_assigned_underwriter_fkey(id, first_name, last_name),
       applicants:deal_applicants(first_name, last_name, applicant_number)
     `)
     .order('created_at', { ascending: false });
