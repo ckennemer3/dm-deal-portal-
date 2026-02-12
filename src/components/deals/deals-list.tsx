@@ -10,7 +10,7 @@ import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatRelativeTime, formatDealAge } from '@/lib/utils';
+import { formatRelativeTime, formatDealAge, toTitleCase } from '@/lib/utils';
 import { canSubmitDeals } from '@/lib/permissions';
 
 interface DealsListProps {
@@ -81,7 +81,7 @@ export function DealsList({ deals, user }: DealsListProps) {
               <tbody className="divide-y divide-surface-200">
                 {filtered.map((deal: any) => {
                   const app = deal.applicants?.find((a: any) => a.applicant_number === 1);
-                  const clientName = app ? `${app.first_name} ${app.last_name}` : 'Unknown';
+                  const clientName = app ? toTitleCase(`${app.first_name} ${app.last_name}`) : 'Unknown';
                   return (
                     <tr
                       key={deal.id}
@@ -93,7 +93,7 @@ export function DealsList({ deals, user }: DealsListProps) {
                       </td>
                       <td className="px-6 py-3 text-sm text-surface-900">{clientName}</td>
                       <td className="px-6 py-3 text-sm text-surface-600">
-                        {deal.vehicle_year} {deal.vehicle_make} {deal.vehicle_model} {deal.vehicle_trim}
+                        {deal.vehicle_year} {toTitleCase(deal.vehicle_make)} {toTitleCase(deal.vehicle_model)} {toTitleCase(deal.vehicle_trim)}
                       </td>
                       <td className="px-6 py-3 text-sm text-surface-600">{DEAL_TYPE_LABELS[deal.deal_type as DealType]}</td>
                       <td className="px-6 py-3"><StatusBadge status={deal.status} /></td>

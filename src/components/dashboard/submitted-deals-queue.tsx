@@ -10,6 +10,7 @@ import {
   calculateLTV,
   formatPercentage,
   getLTVColor,
+  toTitleCase,
 } from '@/lib/utils';
 
 interface SubmittedDealsQueueProps {
@@ -21,6 +22,20 @@ function getFinancingAmount(deal: any): number | null {
     return deal.net_cap_cost;
   }
   return deal.total_amount_financed;
+}
+
+function isUsedVehicle(deal: any): boolean {
+  return deal.vehicle_condition === 'used';
+}
+
+function getRetailDenominator(deal: any): number | null {
+  // Used vehicles → JD Power Retail; New/demo → MSRP
+  return isUsedVehicle(deal) ? deal.jd_power_retail : deal.msrp;
+}
+
+function getWholesaleDenominator(deal: any): number | null {
+  // Used vehicles → JD Power Wholesale; New/demo → Invoice
+  return isUsedVehicle(deal) ? deal.jd_power_wholesale : deal.invoice;
 }
 
 function formatShortDate(dateStr: string): string {
@@ -50,10 +65,10 @@ export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Date</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Client</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Vehicle</th>
-                <th className="text-right text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Credit</th>
-                <th className="text-right text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Payment</th>
-                <th className="text-right text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Retail LTV</th>
-                <th className="text-right text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Wholesale LTV</th>
+                <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[100px]">Credit</th>
+                <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[100px]">Payment</th>
+                <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[110px]">Retail LTV</th>
+                <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[120px]">Wholesale LTV</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Status</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Age</th>
               </tr>
@@ -64,13 +79,13 @@ export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
                   (a: any) => a.applicant_number === 1
                 );
                 const clientName = primaryApplicant
-                  ? `${primaryApplicant.first_name} ${primaryApplicant.last_name}`
+                  ? toTitleCase(`${primaryApplicant.first_name} ${primaryApplicant.last_name}`)
                   : '—';
                 const creditScore = primaryApplicant?.experian_score ?? null;
 
                 const financingAmount = getFinancingAmount(deal);
-                const retailLTV = calculateLTV(financingAmount, deal.jd_power_retail);
-                const wholesaleLTV = calculateLTV(financingAmount, deal.jd_power_wholesale);
+                const retailLTV = calculateLTV(financingAmount, getRetailDenominator(deal));
+                const wholesaleLTV = calculateLTV(financingAmount, getWholesaleDenominator(deal));
 
                 return (
                   <tr
@@ -85,18 +100,18 @@ export function SubmittedDealsQueue({ deals }: SubmittedDealsQueueProps) {
                       {clientName}
                     </td>
                     <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
-                      {deal.vehicle_year} {deal.vehicle_make} {deal.vehicle_model}
+                      {deal.vehicle_year} {toTitleCase(deal.vehicle_make)} {toTitleCase(deal.vehicle_model)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-surface-900 font-medium text-right tabular-nums">
+                    <td className="px-4 py-3 text-sm text-surface-900 font-medium text-center tabular-nums">
                       {creditScore ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-surface-900 font-medium text-right tabular-nums whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-surface-900 font-medium text-center tabular-nums whitespace-nowrap">
                       {formatCurrency(deal.monthly_payment)}
                     </td>
-                    <td className={`px-4 py-3 text-sm font-medium text-right tabular-nums ${getLTVColor(retailLTV)}`}>
+                    <td className={`px-4 py-3 text-sm font-medium text-center tabular-nums ${getLTVColor(retailLTV)}`}>
                       {formatPercentage(retailLTV)}
                     </td>
-                    <td className={`px-4 py-3 text-sm font-medium text-right tabular-nums ${getLTVColor(wholesaleLTV)}`}>
+                    <td className={`px-4 py-3 text-sm font-medium text-center tabular-nums ${getLTVColor(wholesaleLTV)}`}>
                       {formatPercentage(wholesaleLTV)}
                     </td>
                     <td className="px-4 py-3">

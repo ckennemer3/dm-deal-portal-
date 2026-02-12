@@ -209,6 +209,13 @@ export function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// === Text Formatting ===
+
+export function toTitleCase(str: string): string {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // === Misc ===
 
 export function getInitials(firstName: string, lastName: string): string {
