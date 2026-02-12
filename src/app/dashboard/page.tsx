@@ -105,6 +105,7 @@ const TERMINAL_STATUSES: DealStatus[] = ['signed_and_delivered', 'cancelled'];
 const AWAITING_ACTION_STATUSES: DealStatus[] = [
   'pending_manager_review',
   'submitted_to_underwriting',
+  'kicked_back_to_manager',
   'kicked_back_to_sales',
   'submitted_to_lender',
 ];

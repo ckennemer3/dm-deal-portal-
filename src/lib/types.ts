@@ -44,6 +44,7 @@ export type DealStatus =
   | 'pending'
   | 'pending_manager_review'
   | 'submitted_to_underwriting'
+  | 'kicked_back_to_manager'
   | 'kicked_back_to_sales'
   | 'submitted_to_lender'
   | 'approved'

@@ -22,6 +22,7 @@ export const DEAL_STATUS_CONFIG: Record<DealStatus, { label: string; color: stri
   pending: { label: 'Pending', color: 'text-surface-600', bgColor: 'bg-surface-200' },
   pending_manager_review: { label: 'Pending Manager Review', color: 'text-brand-800', bgColor: 'bg-brand-100' },
   submitted_to_underwriting: { label: 'Submitted to Underwriting', color: 'text-purple-800', bgColor: 'bg-purple-100' },
+  kicked_back_to_manager: { label: 'Kicked Back to Manager', color: 'text-orange-900', bgColor: 'bg-orange-100' },
   kicked_back_to_sales: { label: 'Kicked Back to Sales', color: 'text-amber-900', bgColor: 'bg-amber-100' },
   submitted_to_lender: { label: 'Submitted to Lender', color: 'text-purple-800', bgColor: 'bg-purple-100' },
   approved: { label: 'Approved', color: 'text-emerald-900', bgColor: 'bg-emerald-100' },
@@ -92,15 +93,19 @@ export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles:
     roles: ['manager', 'administrator'],
   },
   submitted_to_underwriting: {
-    next: ['submitted_to_lender', 'kicked_back_to_sales', 'cancelled'],
+    next: ['submitted_to_lender', 'kicked_back_to_manager', 'cancelled'],
     roles: ['underwriter', 'administrator'],
+  },
+  kicked_back_to_manager: {
+    next: ['submitted_to_underwriting', 'kicked_back_to_sales', 'cancelled'],
+    roles: ['manager', 'administrator'],
   },
   kicked_back_to_sales: {
     next: ['pending_manager_review', 'cancelled'],
     roles: ['agent', 'administrator'],
   },
   submitted_to_lender: {
-    next: ['approved', 'kicked_back_to_sales', 'cancelled'],
+    next: ['approved', 'kicked_back_to_manager', 'cancelled'],
     roles: ['underwriter', 'administrator'],
   },
   approved: {

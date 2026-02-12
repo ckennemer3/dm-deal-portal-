@@ -169,19 +169,25 @@ export function canReassignDeal(user: User): boolean {
 // === Manager Actions ===
 
 export function canApproveAndForward(user: User, deal: Deal): boolean {
+  // Manager can send to UW from initial review or after UW kicks it back
   return (
     (user.role === 'manager' || user.role === 'administrator') &&
-    deal.status === 'pending_manager_review'
+    (deal.status === 'pending_manager_review' || deal.status === 'kicked_back_to_manager')
   );
 }
 
-export function canKickBackToSales(user: User, deal: Deal): boolean {
-  // Manager can kick back when reviewing; UW can kick back from underwriting or lender stages
-  if (user.role === 'manager' || user.role === 'administrator') {
-    return deal.status === 'pending_manager_review';
-  }
-  if (user.role === 'underwriter') {
+export function canKickBackToManager(user: User, deal: Deal): boolean {
+  // UW kicks back to manager (not directly to agent)
+  if (user.role === 'underwriter' || user.role === 'administrator') {
     return deal.status === 'submitted_to_underwriting' || deal.status === 'submitted_to_lender';
+  }
+  return false;
+}
+
+export function canKickBackToSales(user: User, deal: Deal): boolean {
+  // Manager can kick back to agent from review or after UW kicked back to them
+  if (user.role === 'manager' || user.role === 'administrator') {
+    return deal.status === 'pending_manager_review' || deal.status === 'kicked_back_to_manager';
   }
   return false;
 }
