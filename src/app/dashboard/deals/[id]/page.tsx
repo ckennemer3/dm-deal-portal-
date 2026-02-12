@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import { DealDetail } from '@/components/deals/deal-detail';
 
-export default async function DealDetailPage({ params }: { params: { id: string } }) {
+export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: dealId } = await params;
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect('/auth/login');
@@ -14,7 +15,6 @@ export default async function DealDetailPage({ params }: { params: { id: string 
   if (!userProfile) redirect('/auth/login');
 
   // Fetch deal with all related data
-  // Use separate queries for user joins to avoid FK constraint name issues
   const { data: deal, error } = await supabase
     .from('deals')
     .select(`
@@ -27,10 +27,13 @@ export default async function DealDetailPage({ params }: { params: { id: string 
       status_history:deal_status_history(*),
       field_changes:deal_field_changes(*)
     `)
-    .eq('id', params.id)
+    .eq('id', dealId)
     .single();
 
-  if (error || !deal) notFound();
+  if (error) {
+    console.error('Deal detail query error:', error.message);
+  }
+  if (!deal) notFound();
 
   // Collect all user IDs referenced across the deal and its sub-records
   const allUserIds = new Set<string>();

@@ -23,8 +23,8 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
     notes,
   });
 
-  revalidatePath(`/deals/${dealId}`);
-  revalidatePath('/deals');
+  revalidatePath(`/dashboard/deals/${dealId}`);
+  revalidatePath('/dashboard/deals');
   revalidatePath('/dashboard');
 }
 
@@ -47,8 +47,8 @@ export async function claimDeal(dealId: string) {
     assignment_type: 'underwriter_claim',
   });
 
-  revalidatePath(`/deals/${dealId}`);
-  revalidatePath('/deals');
+  revalidatePath(`/dashboard/deals/${dealId}`);
+  revalidatePath('/dashboard/deals');
   revalidatePath('/dashboard');
 }
 
@@ -69,7 +69,7 @@ export async function reassignDeal(dealId: string, newUnderwriterId: string) {
     assignment_type: 'reassignment',
   });
 
-  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/dashboard/deals/${dealId}`);
 }
 
 export async function sendMessage(dealId: string, content: string, messageType: 'note' | 'action_required') {
@@ -85,7 +85,7 @@ export async function sendMessage(dealId: string, content: string, messageType: 
     is_resolved: false,
   });
   if (error) throw new Error(error.message);
-  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/dashboard/deals/${dealId}`);
 }
 
 export async function resolveMessage(messageId: string) {
@@ -99,7 +99,7 @@ export async function resolveMessage(messageId: string) {
     resolved_at: new Date().toISOString(),
   }).eq('id', messageId);
   if (error) throw new Error(error.message);
-  revalidatePath('/deals');
+  revalidatePath('/dashboard/deals');
 }
 
 export async function updateDealField(dealId: string, fieldName: string, oldValue: string, newValue: string) {
@@ -118,5 +118,5 @@ export async function updateDealField(dealId: string, fieldName: string, oldValu
     changed_by: user.id,
   });
 
-  revalidatePath(`/deals/${dealId}`);
+  revalidatePath(`/dashboard/deals/${dealId}`);
 }
