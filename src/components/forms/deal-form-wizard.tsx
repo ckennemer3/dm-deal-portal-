@@ -14,6 +14,7 @@ import { StepOpenAutos } from './steps/step-open-autos';
 import { StepCredit } from './steps/step-credit';
 import { StepDocuments } from './steps/step-documents';
 import { submitDeal } from '@/app/dashboard/deals/new/actions';
+import { uploadDocument } from '@/app/dashboard/deals/actions-documents';
 
 interface DealFormWizardProps {
   user: UserWithRelations;
@@ -48,6 +49,10 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  // Document files — stored separately since File objects aren't serializable
+  const [pendingFiles, setPendingFiles] = useState<Map<string, File>>(new Map());
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+
   const updateFormData = useCallback((updates: Partial<DealFormData>) => {
     setFormData(prev => {
       const next = { ...prev, ...updates };
@@ -81,6 +86,23 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
       return next;
     });
     setErrors({});
+  }, []);
+
+  // Document file handlers
+  const handleFileSelect = useCallback((docType: string, file: File) => {
+    setPendingFiles(prev => {
+      const next = new Map(prev);
+      next.set(docType, file);
+      return next;
+    });
+  }, []);
+
+  const handleFileRemove = useCallback((docType: string) => {
+    setPendingFiles(prev => {
+      const next = new Map(prev);
+      next.delete(docType);
+      return next;
+    });
   }, []);
 
   const validateStep = (step: number): boolean => {
@@ -159,12 +181,36 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
     setSubmitting(true);
     setSubmitError('');
     try {
+      // Phase 1: Create the deal record
       const result = await submitDeal(formData);
-      router.push(`/dashboard/deals/${result.dealId}?submitted=true`);
+      const dealId = result.dealId;
+
+      // Phase 2: Upload all pending documents to the new deal
+      const filesToUpload = Array.from(pendingFiles.entries());
+      if (filesToUpload.length > 0) {
+        setUploadProgress({ current: 0, total: filesToUpload.length });
+
+        for (let i = 0; i < filesToUpload.length; i++) {
+          const [docType, file] = filesToUpload[i];
+          setUploadProgress({ current: i + 1, total: filesToUpload.length });
+
+          try {
+            const fd = new FormData();
+            fd.append('file', file);
+            await uploadDocument(dealId, docType, null, fd);
+          } catch (uploadErr) {
+            // Log but don't block — documents can be re-uploaded from deal detail
+            console.error(`Failed to upload ${docType}:`, uploadErr);
+          }
+        }
+      }
+
+      router.push(`/dashboard/deals/${dealId}?submitted=true`);
     } catch (err: any) {
       setSubmitError(err.message || 'Failed to submit deal');
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -175,7 +221,12 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
     4: <StepTradeIn formData={formData} updateFormData={updateFormData} errors={errors} />,
     5: <StepOpenAutos formData={formData} updateFormData={updateFormData} errors={errors} />,
     6: <StepCredit formData={formData} updateFormData={updateFormData} errors={errors} />,
-    7: <StepDocuments formData={formData} dealId={null} />,
+    7: <StepDocuments
+         formData={formData}
+         pendingFiles={pendingFiles}
+         onFileSelect={handleFileSelect}
+         onFileRemove={handleFileRemove}
+       />,
   };
 
   return (
@@ -235,6 +286,27 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
             <p className="text-sm text-red-700">{submitError}</p>
           </div>
         )}
+
+        {/* Upload progress indicator */}
+        {uploadProgress && (
+          <div className="mt-4 p-3 rounded-lg bg-brand-50 border border-brand-200">
+            <div className="flex items-center gap-3">
+              <svg className="w-4 h-4 text-brand-600 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <p className="text-sm text-brand-700">
+                Uploading documents... {uploadProgress.current} of {uploadProgress.total}
+              </p>
+            </div>
+            <div className="mt-2 w-full bg-brand-100 rounded-full h-1.5">
+              <div
+                className="bg-brand-600 h-1.5 rounded-full transition-all duration-300"
+                style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -242,7 +314,7 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
         <Button
           variant="secondary"
           onClick={goBack}
-          disabled={currentStep === 1}
+          disabled={currentStep === 1 || submitting}
         >
           Back
         </Button>
@@ -253,7 +325,7 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
             </Button>
           ) : (
             <Button onClick={handleSubmit} loading={submitting}>
-              Submit Deal
+              {uploadProgress ? 'Uploading Documents...' : 'Submit Deal'}
             </Button>
           )}
         </div>

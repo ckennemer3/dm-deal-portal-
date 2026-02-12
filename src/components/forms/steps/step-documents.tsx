@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { DealFormData, DealType, DocumentType } from '@/lib/types';
 import { REQUIRED_DOCUMENTS, OPTIONAL_DOCUMENTS, DOCUMENT_TYPE_LABELS } from '@/lib/constants';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -8,11 +7,12 @@ import { Card } from '@/components/ui/card';
 
 interface StepDocumentsProps {
   formData: DealFormData;
-  dealId: string | null;
+  pendingFiles: Map<string, File>;
+  onFileSelect: (docType: string, file: File) => void;
+  onFileRemove: (docType: string) => void;
 }
 
-export function StepDocuments({ formData, dealId }: StepDocumentsProps) {
-  const [uploadedDocs, setUploadedDocs] = useState<Record<string, { name: string }>>({});
+export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemove }: StepDocumentsProps) {
   const dealType = formData.deal_type;
   const condition = formData.vehicle_condition;
 
@@ -32,12 +32,12 @@ export function StepDocuments({ formData, dealId }: StepDocumentsProps) {
   }
 
   const handleUpload = async (docType: string, file: File) => {
-    // In a real implementation, upload to Supabase storage
-    // For now, track locally
-    setUploadedDocs(prev => ({
-      ...prev,
-      [docType]: { name: file.name },
-    }));
+    onFileSelect(docType, file);
+  };
+
+  const getFileInfo = (docType: string): { name: string } | null => {
+    const file = pendingFiles.get(docType);
+    return file ? { name: file.name } : null;
   };
 
   return (
@@ -51,9 +51,8 @@ export function StepDocuments({ formData, dealId }: StepDocumentsProps) {
               key={docType}
               label={DOCUMENT_TYPE_LABELS[docType]}
               required
-              currentFile={uploadedDocs[docType] || null}
+              currentFile={getFileInfo(docType)}
               onUpload={(file) => handleUpload(docType, file)}
-              error={!uploadedDocs[docType] ? undefined : undefined}
             />
           ))}
         </div>
@@ -70,7 +69,7 @@ export function StepDocuments({ formData, dealId }: StepDocumentsProps) {
                   key={`alt_bureau_${i}`}
                   label={`Alternate Credit Bureau — ${app.first_name} ${app.last_name}`}
                   required
-                  currentFile={uploadedDocs[`alternate_credit_bureau_${i}`] || null}
+                  currentFile={getFileInfo(`alternate_credit_bureau_${i}`)}
                   onUpload={(file) => handleUpload(`alternate_credit_bureau_${i}`, file)}
                 />
               ) : null
@@ -87,7 +86,7 @@ export function StepDocuments({ formData, dealId }: StepDocumentsProps) {
             <FileUpload
               key={docType}
               label={DOCUMENT_TYPE_LABELS[docType]}
-              currentFile={uploadedDocs[docType] || null}
+              currentFile={getFileInfo(docType)}
               onUpload={(file) => handleUpload(docType, file)}
             />
           ))}
