@@ -105,7 +105,7 @@ export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles:
   },
   approved: {
     next: ['signed_and_delivered', 'cancelled'],
-    roles: ['manager', 'underwriter', 'administrator'],
+    roles: ['agent', 'manager', 'underwriter', 'administrator'],
   },
   signed_and_delivered: {
     next: [],

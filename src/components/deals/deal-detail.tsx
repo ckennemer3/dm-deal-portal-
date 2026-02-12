@@ -457,8 +457,8 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
               <Button variant="ghost" onClick={() => setShowReassignModal(true)}>Reassign</Button>
             </>
           )}
-          {/* Manager/UW can mark approved deals as signed & delivered */}
-          {(user.role === 'manager' || user.role === 'underwriter' || user.role === 'administrator') && deal.status === 'approved' && (
+          {/* Agent/Manager/UW can mark approved deals as signed & delivered */}
+          {deal.status === 'approved' && (user.role === 'agent' || user.role === 'manager' || user.role === 'underwriter' || user.role === 'administrator') && (
             <Button onClick={handleComplete} loading={loading}>Mark Signed & Delivered</Button>
           )}
           {/* Agent resubmit from kickback */}
