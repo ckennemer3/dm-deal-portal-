@@ -45,6 +45,8 @@ export type KickbackReason =
   | 'incomplete_application'
   | 'ltv_too_high'
   | 'missing_documents'
+  | 'incorrect_numbers'
+  | 'missing_stipulations'
   | 'other';
 
 export type DealStatus =
@@ -90,6 +92,10 @@ export interface Deal {
   has_derogatory_credit: boolean;
   derogatory_credit_explanation: string | null;
   num_applicants: number;
+  claimed_at: string | null;
+  completed_at: string | null;
+  last_activity_at: string;
+  kickback_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -197,6 +203,8 @@ export interface DealStatusHistory {
   changed_by: string;
   changed_at: string;
   notes: string | null;
+  kickback_reason: string | null;
+  kickback_explanation: string | null;
   changer?: User;
 }
 
@@ -220,6 +228,86 @@ export interface DealAssignment {
   assigned_by: string | null;
   assignment_type: AssignmentType;
   assigned_at: string;
+}
+
+// === Audit Log Types ===
+
+export type AuditActionType =
+  | 'document_uploaded'
+  | 'document_replaced'
+  | 'document_deleted'
+  | 'deal_kicked_back'
+  | 'deal_resubmitted'
+  | 'status_changed'
+  | 'field_changed'
+  | 'message_sent'
+  | 'action_required_resolved'
+  | 'deal_claimed'
+  | 'deal_reassigned';
+
+export interface AuditLogEntry {
+  id: string;
+  deal_id: string;
+  user_id: string;
+  action_type: AuditActionType;
+  description: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  user?: User;
+}
+
+// === Deal Views (Unread Tracking) ===
+
+export interface DealView {
+  id: string;
+  user_id: string;
+  deal_id: string;
+  last_viewed_at: string;
+}
+
+// === In-App Notifications ===
+
+export type NotificationEventType =
+  | 'new_deal_queue'
+  | 'new_message'
+  | 'deal_kicked_back'
+  | 'document_uploaded'
+  | 'deal_resubmitted'
+  | 'status_changed'
+  | 'deal_claimed'
+  | 'action_required';
+
+export interface InAppNotification {
+  id: string;
+  user_id: string;
+  deal_id: string | null;
+  type: string;
+  title: string;
+  message: string;
+  deal_number: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+// === Kickback Reasons (Normalized for Reporting) ===
+
+export type KickbackReasonCategory =
+  | 'poor_deal_information'
+  | 'incomplete_application'
+  | 'ltv_too_high'
+  | 'missing_documents'
+  | 'incorrect_numbers'
+  | 'missing_stipulations'
+  | 'other';
+
+export interface KickbackReasonEntry {
+  id: string;
+  deal_id: string;
+  kicked_by_user_id: string;
+  kicked_to_user_id: string | null;
+  reason_category: KickbackReasonCategory;
+  reason_detail: string | null;
+  created_at: string;
 }
 
 // === Form Types ===

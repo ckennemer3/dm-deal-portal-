@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
 import { DOCUMENT_TYPE_LABELS } from '@/lib/constants';
 import type { DocumentType } from '@/lib/types';
+import { logAuditEvent, notifyDealParticipants } from '@/services/audit';
 
 export async function uploadDocument(
   dealId: string,
@@ -106,6 +107,24 @@ export async function uploadDocument(
     userId: user.id,
   });
 
+  const docTypeLabel = DOCUMENT_TYPE_LABELS[documentType as DocumentType] || documentType;
+
+  await logAuditEvent({
+    dealId,
+    userId: user.id,
+    actionType: 'document_uploaded',
+    description: `Document uploaded: ${docTypeLabel}`,
+    metadata: { document_type: documentType, original_filename: file.name },
+  });
+
+  await notifyDealParticipants({
+    dealId,
+    excludeUserId: user.id,
+    type: 'document_uploaded',
+    title: 'Document Uploaded',
+    message: `A new ${docTypeLabel} document has been uploaded.`,
+  });
+
   revalidatePath(`/dashboard/deals/${dealId}`);
   return { success: true, path: storagePath };
 }
@@ -124,11 +143,33 @@ export async function deleteDocument(documentId: string) {
 
   if (!doc) throw new Error('Document not found');
 
+  // Get document type before deletion for audit log
+  const { data: docFull } = await supabase
+    .from('deal_documents')
+    .select('document_type, original_filename')
+    .eq('id', documentId)
+    .single();
+
   // Delete from storage
   await supabase.storage.from('deal-documents').remove([doc.storage_path]);
 
   // Delete record
   await supabase.from('deal_documents').delete().eq('id', documentId);
+
+  const docTypeLabel = docFull?.document_type
+    ? (DOCUMENT_TYPE_LABELS[docFull.document_type as DocumentType] || docFull.document_type)
+    : 'Unknown';
+
+  await logAuditEvent({
+    dealId: doc.deal_id,
+    userId: user.id,
+    actionType: 'document_deleted',
+    description: `Document deleted: ${docTypeLabel}`,
+    metadata: {
+      document_type: docFull?.document_type || 'unknown',
+      original_filename: docFull?.original_filename || 'unknown',
+    },
+  });
 
   revalidatePath(`/dashboard/deals/${doc.deal_id}`);
   return { success: true };

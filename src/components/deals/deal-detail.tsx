@@ -16,13 +16,17 @@ import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickB
 import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
+import { AuditLog } from './audit-log';
+import { DealAgeTimer } from '@/components/ui/deal-age-timer';
 import { getTimerThresholdForStatus } from '@/lib/timer-utils';
+import { MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
 import type { DocumentType } from '@/lib/types';
 
 interface DealDetailProps {
   deal: any;
   user: UserWithRelations;
   underwriters: { id: string; first_name: string; last_name: string }[];
+  auditEntries?: any[];
 }
 
 // Friendly labels for field names used in inline editing and deal history
@@ -237,7 +241,7 @@ function SectionEditButton({ editing, onClick }: { editing: boolean; onClick: ()
 }
 
 
-export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
+export function DealDetail({ deal, user, underwriters, auditEntries = [] }: DealDetailProps) {
   const router = useRouter();
   const [showKickbackModal, setShowKickbackModal] = useState(false);
   const [kickbackMessage, setKickbackMessage] = useState('');
@@ -495,8 +499,25 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
             {clientName} &mdash; {vehicleSummary} &mdash; {DEAL_TYPE_LABELS[deal.deal_type as keyof typeof DEAL_TYPE_LABELS]}
           </p>
           <p className="text-xs text-surface-400 mt-1">
-            Deal Age: {formatDealAge(deal.created_at)} &mdash; Submitted {formatTimestamp(deal.created_at)}
+            Submitted {formatTimestamp(deal.created_at)}
           </p>
+          {/* Prominent Timers */}
+          {isActiveDeal && (
+            <div className="flex items-center gap-3 mt-3">
+              <DealAgeTimer startTime={deal.created_at} label="Deal Age" size="lg" />
+              {deal.latest_action_required_at && (
+                <DealAgeTimer
+                  startTime={deal.latest_action_required_at}
+                  label="Action Request"
+                  size="lg"
+                  thresholds={{
+                    green_max_hours: MANAGER_RESPONSE_TIMER_CONFIG.green_max_minutes / 60,
+                    yellow_max_hours: MANAGER_RESPONSE_TIMER_CONFIG.yellow_max_minutes / 60,
+                  }}
+                />
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {/* Action Buttons based on role and status */}
@@ -747,6 +768,9 @@ export function DealDetail({ deal, user, underwriters }: DealDetailProps) {
               )}
             </div>
           </Card>
+
+          {/* Audit Log */}
+          <AuditLog entries={auditEntries} />
         </div>
 
         {/* Right: Documents & Communication */}

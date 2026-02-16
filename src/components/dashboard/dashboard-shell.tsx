@@ -11,6 +11,7 @@ import { canAccessAdminPanel, canAccessReporting, canSubmitDeals } from '@/lib/p
 import { createClient } from '@/lib/supabase/client';
 import { getInitials } from '@/lib/utils';
 import { RoleSwitcherProvider, useRoleSwitcher } from '@/contexts/role-switcher-context';
+import { NotificationBell } from './notification-bell';
 
 interface DashboardShellProps {
   user: UserWithRelations;
@@ -248,6 +249,9 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
                 </select>
               </div>
             )}
+
+            {/* Notification Bell */}
+            <NotificationBell userId={user.id} />
 
             {user.team?.name && (
               <span className="text-xs text-surface-400 hidden md:block">

@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { DealStatus, KickbackReason } from '@/lib/types';
+import { logAuditEvent, notifyDealParticipants } from '@/services/audit';
+import { DEAL_STATUS_CONFIG, KICKBACK_REASON_LABELS } from '@/lib/constants';
 
 interface StatusUpdateOptions {
   kickbackReason?: KickbackReason;
@@ -14,7 +16,7 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: deal } = await supabase.from('deals').select('status').eq('id', dealId).single();
+  const { data: deal } = await supabase.from('deals').select('status, deal_number').eq('id', dealId).single();
   if (!deal) throw new Error('Deal not found');
 
   const { error } = await supabase.from('deals').update({ status: newStatus }).eq('id', dealId);
@@ -30,6 +32,62 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
     ...(options?.kickbackExplanation && { kickback_explanation: options.kickbackExplanation }),
   });
 
+  // Determine audit action type
+  const isKickback = newStatus === 'kicked_back_to_manager' || newStatus === 'kicked_back_to_sales';
+  const isResubmit = (deal.status === 'kicked_back_to_sales' && newStatus === 'pending_manager_review')
+    || (deal.status === 'kicked_back_to_manager' && newStatus === 'submitted_to_underwriting');
+
+  let auditAction: 'deal_kicked_back' | 'deal_resubmitted' | 'status_changed';
+  let auditDescription: string;
+
+  if (isKickback) {
+    auditAction = 'deal_kicked_back';
+    const reasonLabel = options?.kickbackReason ? KICKBACK_REASON_LABELS[options.kickbackReason] : 'N/A';
+    auditDescription = `Deal kicked back: ${reasonLabel}${options?.kickbackExplanation ? ` — ${options.kickbackExplanation}` : ''}`;
+  } else if (isResubmit) {
+    auditAction = 'deal_resubmitted';
+    auditDescription = `Deal resubmitted from ${DEAL_STATUS_CONFIG[deal.status as DealStatus]?.label || deal.status}`;
+  } else {
+    auditAction = 'status_changed';
+    auditDescription = `Status changed to ${DEAL_STATUS_CONFIG[newStatus]?.label || newStatus}`;
+  }
+
+  await logAuditEvent({
+    dealId,
+    userId: user.id,
+    actionType: auditAction,
+    description: auditDescription,
+    metadata: {
+      from_status: deal.status,
+      to_status: newStatus,
+      ...(options?.kickbackReason && { kickback_reason: options.kickbackReason }),
+      ...(notes && { notes }),
+    },
+  });
+
+  // Insert normalized kickback reason for reporting
+  if (isKickback && options?.kickbackReason) {
+    await supabase.from('kickback_reasons').insert({
+      deal_id: dealId,
+      kicked_by_user_id: user.id,
+      reason_category: options.kickbackReason,
+      reason_detail: options.kickbackExplanation || null,
+    }).then(({ error: kbError }) => {
+      if (kbError) {
+        console.error('Failed to insert kickback_reason:', kbError.message);
+      }
+    });
+  }
+
+  // Notify deal participants
+  await notifyDealParticipants({
+    dealId,
+    excludeUserId: user.id,
+    type: auditAction,
+    title: `Deal ${deal.deal_number}: ${DEAL_STATUS_CONFIG[newStatus]?.label || newStatus}`,
+    message: auditDescription,
+  });
+
   revalidatePath(`/dashboard/deals/${dealId}`);
   revalidatePath('/dashboard/deals');
   revalidatePath('/dashboard');
@@ -40,18 +98,51 @@ export async function claimDeal(dealId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // In the new workflow, claiming a deal just assigns the underwriter.
-  // The status remains 'submitted_to_underwriting' — no status change.
-  const { error } = await supabase.from('deals').update({
-    assigned_underwriter: user.id,
-  }).eq('id', dealId);
-  if (error) throw new Error(error.message);
+  // Atomic conditional update — only succeeds if assigned_underwriter IS NULL
+  const { data, error } = await supabase
+    .from('deals')
+    .update({ assigned_underwriter: user.id })
+    .eq('id', dealId)
+    .is('assigned_underwriter', null)
+    .select('id, deal_number')
+    .single();
 
+  if (error || !data) {
+    // Someone else claimed it — find who
+    const { data: deal } = await supabase
+      .from('deals')
+      .select('assigned_underwriter, uw:users!deals_assigned_underwriter_fkey(first_name, last_name)')
+      .eq('id', dealId)
+      .single();
+
+    // Supabase returns FK joins as arrays; grab the first element
+    const uwArr = deal?.uw as unknown as { first_name: string; last_name: string }[] | null;
+    const uw = uwArr?.[0];
+    const uwName = uw ? `${uw.first_name} ${uw.last_name}` : 'another underwriter';
+    throw new Error(`CLAIM_CONFLICT:${uwName}`);
+  }
+
+  // claimed_at is set automatically by trigger (tr_deals_set_claimed_at)
   await supabase.from('deal_assignments').insert({
     deal_id: dealId,
     assigned_to: user.id,
     assigned_by: null,
     assignment_type: 'underwriter_claim',
+  });
+
+  await logAuditEvent({
+    dealId,
+    userId: user.id,
+    actionType: 'deal_claimed',
+    description: 'Deal claimed by underwriter',
+  });
+
+  await notifyDealParticipants({
+    dealId,
+    excludeUserId: user.id,
+    type: 'deal_claimed',
+    title: `Deal ${data.deal_number}: Claimed`,
+    message: 'An underwriter has claimed this deal for review.',
   });
 
   revalidatePath(`/dashboard/deals/${dealId}`);
@@ -64,6 +155,8 @@ export async function reassignDeal(dealId: string, newUnderwriterId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
+  const { data: deal } = await supabase.from('deals').select('deal_number').eq('id', dealId).single();
+
   const { error } = await supabase.from('deals').update({
     assigned_underwriter: newUnderwriterId,
   }).eq('id', dealId);
@@ -74,6 +167,31 @@ export async function reassignDeal(dealId: string, newUnderwriterId: string) {
     assigned_to: newUnderwriterId,
     assigned_by: user.id,
     assignment_type: 'reassignment',
+  });
+
+  // Get new UW name for audit description
+  const { data: newUw } = await supabase
+    .from('users')
+    .select('first_name, last_name')
+    .eq('id', newUnderwriterId)
+    .single();
+
+  const uwName = newUw ? `${newUw.first_name} ${newUw.last_name}` : newUnderwriterId;
+
+  await logAuditEvent({
+    dealId,
+    userId: user.id,
+    actionType: 'deal_reassigned',
+    description: `Deal reassigned to ${uwName}`,
+    metadata: { new_underwriter_id: newUnderwriterId },
+  });
+
+  await notifyDealParticipants({
+    dealId,
+    excludeUserId: user.id,
+    type: 'deal_reassigned',
+    title: `Deal ${deal?.deal_number || ''}: Reassigned`,
+    message: `Deal has been reassigned to ${uwName}.`,
   });
 
   revalidatePath(`/dashboard/deals/${dealId}`);
@@ -92,13 +210,42 @@ export async function sendMessage(dealId: string, content: string, messageType: 
     is_resolved: false,
   });
   if (error) throw new Error(error.message);
+
+  const { data: deal } = await supabase.from('deals').select('deal_number').eq('id', dealId).single();
+
+  await logAuditEvent({
+    dealId,
+    userId: user.id,
+    actionType: 'message_sent',
+    description: `${messageType === 'action_required' ? 'Action required' : 'Note'} added`,
+    metadata: { message_type: messageType },
+  });
+
+  const notifType = messageType === 'action_required' ? 'action_required' : 'new_message';
+  await notifyDealParticipants({
+    dealId,
+    excludeUserId: user.id,
+    type: notifType,
+    title: `Deal ${deal?.deal_number || ''}: ${messageType === 'action_required' ? 'Action Required' : 'New Note'}`,
+    message: content.length > 100 ? content.slice(0, 100) + '...' : content,
+  });
+
   revalidatePath(`/dashboard/deals/${dealId}`);
 }
 
-export async function resolveMessage(messageId: string) {
+export async function resolveMessage(messageId: string, dealId?: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
+
+  // Get the message to find the deal_id if not provided
+  const { data: msg } = await supabase
+    .from('deal_messages')
+    .select('deal_id')
+    .eq('id', messageId)
+    .single();
+
+  const resolvedDealId = dealId || msg?.deal_id;
 
   const { error } = await supabase.from('deal_messages').update({
     is_resolved: true,
@@ -106,7 +253,21 @@ export async function resolveMessage(messageId: string) {
     resolved_at: new Date().toISOString(),
   }).eq('id', messageId);
   if (error) throw new Error(error.message);
+
+  if (resolvedDealId) {
+    await logAuditEvent({
+      dealId: resolvedDealId,
+      userId: user.id,
+      actionType: 'action_required_resolved',
+      description: 'Action required item resolved',
+      metadata: { message_id: messageId },
+    });
+  }
+
   revalidatePath('/dashboard/deals');
+  if (resolvedDealId) {
+    revalidatePath(`/dashboard/deals/${resolvedDealId}`);
+  }
 }
 
 export async function updateDealField(dealId: string, fieldName: string, oldValue: string, newValue: string) {
@@ -125,5 +286,31 @@ export async function updateDealField(dealId: string, fieldName: string, oldValu
     changed_by: user.id,
   });
 
+  await logAuditEvent({
+    dealId,
+    userId: user.id,
+    actionType: 'field_changed',
+    description: `Field "${fieldName}" changed`,
+    metadata: { field_name: fieldName, old_value: oldValue, new_value: newValue },
+  });
+
   revalidatePath(`/dashboard/deals/${dealId}`);
+}
+
+/**
+ * Record that the current user has viewed a deal (for unread tracking).
+ */
+export async function recordDealView(dealId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from('deal_views').upsert(
+    {
+      user_id: user.id,
+      deal_id: dealId,
+      last_viewed_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id,deal_id' }
+  );
 }

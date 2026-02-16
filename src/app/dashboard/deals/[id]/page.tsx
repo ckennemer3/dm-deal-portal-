@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { DealDetail } from '@/components/deals/deal-detail';
+import { recordDealView } from './actions';
 import type { UserRole } from '@/lib/types';
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -62,6 +63,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   (deal.status_history || []).forEach((h: any) => { if (h.changed_by) allUserIds.add(h.changed_by); });
   (deal.field_changes || []).forEach((f: any) => { if (f.changed_by) allUserIds.add(f.changed_by); });
 
+  // Fetch audit log entries for this deal
+  const { data: auditEntries } = await supabase
+    .from('audit_log')
+    .select('*')
+    .eq('deal_id', dealId)
+    .order('created_at', { ascending: false });
+
+  // Collect audit log user IDs too
+  (auditEntries || []).forEach((a: any) => { if (a.user_id) allUserIds.add(a.user_id); });
+
   // Fetch all referenced users in one query
   const { data: relatedUsers } = allUserIds.size > 0
     ? await supabase.from('users').select('id, first_name, last_name, email, role').in('id', Array.from(allUserIds))
@@ -80,6 +91,18 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   (deal.status_history || []).forEach((h: any) => { h.changer = usersMap[h.changed_by] || null; });
   (deal.field_changes || []).forEach((f: any) => { f.changer = usersMap[f.changed_by] || null; });
 
+  // Attach user data to audit entries
+  const enrichedAuditEntries = (auditEntries || []).map((a: any) => ({
+    ...a,
+    user: usersMap[a.user_id] || null,
+  }));
+
+  // Compute latest unresolved action_required timestamp for timer display
+  const unresolvedActions = (deal.messages || [])
+    .filter((m: any) => m.message_type === 'action_required' && !m.is_resolved)
+    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  (deal as any).latest_action_required_at = unresolvedActions[0]?.created_at || null;
+
   // Fetch underwriters for reassignment dropdown
   const { data: underwriters } = await supabase
     .from('users')
@@ -87,5 +110,16 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     .eq('role', 'underwriter')
     .eq('is_active', true);
 
-  return <DealDetail deal={deal} user={userProfile} underwriters={underwriters || []} />;
+  // Record that the user viewed this deal (for unread tracking)
+  // Fire-and-forget — don't block page render
+  recordDealView(dealId).catch(() => {});
+
+  return (
+    <DealDetail
+      deal={deal}
+      user={userProfile}
+      underwriters={underwriters || []}
+      auditEntries={enrichedAuditEntries}
+    />
+  );
 }

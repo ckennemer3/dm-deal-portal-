@@ -1,4 +1,4 @@
-import { DealStatus, DealType, DocumentType, KickbackReason, UserRole, VehicleCondition, TimerConfig } from './types';
+import { DealStatus, DealType, DocumentType, KickbackReason, KickbackReasonCategory, AuditActionType, UserRole, VehicleCondition, TimerConfig } from './types';
 
 // === Role Display Names ===
 export const ROLE_LABELS: Record<UserRole, string> = {
@@ -128,6 +128,19 @@ export const KICKBACK_REASON_LABELS: Record<KickbackReason, string> = {
   incomplete_application: 'Incomplete Application',
   ltv_too_high: 'Loan to Value Too High',
   missing_documents: 'Missing Documents for Submittal',
+  incorrect_numbers: 'Incorrect Numbers',
+  missing_stipulations: 'Missing Stipulations',
+  other: 'Other',
+};
+
+// === Kickback Reason Category Labels (for reporting) ===
+export const KICKBACK_REASON_CATEGORY_LABELS: Record<KickbackReasonCategory, string> = {
+  poor_deal_information: 'Poor Deal Information',
+  incomplete_application: 'Incomplete Application',
+  ltv_too_high: 'Loan to Value Too High',
+  missing_documents: 'Missing Documents for Submittal',
+  incorrect_numbers: 'Incorrect Numbers',
+  missing_stipulations: 'Missing Stipulations',
   other: 'Other',
 };
 
@@ -176,4 +189,64 @@ export const PORTAL_MODULES = [
     href: '#',
     available: false,
   },
+] as const;
+
+// === Manager Response Timer Config ===
+export const MANAGER_RESPONSE_TIMER_CONFIG = {
+  green_max_minutes: 30,
+  yellow_max_minutes: 60,
+};
+
+// === Audit Action Labels ===
+export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
+  document_uploaded: 'Document Uploaded',
+  document_replaced: 'Document Replaced',
+  document_deleted: 'Document Deleted',
+  deal_kicked_back: 'Deal Kicked Back',
+  deal_resubmitted: 'Deal Resubmitted',
+  status_changed: 'Status Changed',
+  field_changed: 'Field Changed',
+  message_sent: 'Message Sent',
+  action_required_resolved: 'Action Required Resolved',
+  deal_claimed: 'Deal Claimed',
+  deal_reassigned: 'Deal Reassigned',
+};
+
+// === Reporting Date Range Presets ===
+export const REPORTING_DATE_RANGES = [
+  { value: 'today', label: 'Today' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'last_30', label: 'Last 30 Days' },
+  { value: 'last_90', label: 'Last 90 Days' },
+  { value: 'custom', label: 'Custom Range' },
+] as const;
+
+// === Credit Score Range Buckets (Reporting) ===
+export const CREDIT_SCORE_RANGES = [
+  { label: '750+', min: 750, max: 999 },
+  { label: '700-749', min: 700, max: 749 },
+  { label: '650-699', min: 650, max: 699 },
+  { label: '600-649', min: 600, max: 649 },
+  { label: '550-599', min: 550, max: 599 },
+  { label: '<550', min: 0, max: 549 },
+] as const;
+
+// === LTV Range Buckets (Reporting) ===
+export const LTV_RANGES = [
+  { label: '<80%', min: 0, max: 80 },
+  { label: '80-90%', min: 80, max: 90 },
+  { label: '90-100%', min: 90, max: 100 },
+  { label: '100-110%', min: 100, max: 110 },
+  { label: '110-120%', min: 110, max: 120 },
+  { label: '120%+', min: 120, max: 999 },
+] as const;
+
+// === Pipeline Aging Buckets (Reporting) ===
+export const PIPELINE_AGE_BUCKETS = [
+  { label: '0-1 days', maxHours: 24 },
+  { label: '1-3 days', maxHours: 72 },
+  { label: '3-5 days', maxHours: 120 },
+  { label: '5-7 days', maxHours: 168 },
+  { label: '7+ days', maxHours: Infinity },
 ] as const;

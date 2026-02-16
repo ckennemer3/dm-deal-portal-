@@ -6,6 +6,7 @@ import { UserRole, DealStatus } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/constants';
 import { formatDuration } from '@/lib/utils';
 import { SubmittedDealsQueue } from '@/components/dashboard/submitted-deals-queue';
+import { UnderwriterDashboard } from '@/components/dashboard/underwriter-dashboard';
 
 // --- Helper: role-specific quick actions ---
 
@@ -246,6 +247,67 @@ export default async function DashboardPage() {
   // Greeting based on time of day
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  // ---- Underwriter Dashboard ----
+  if (effectiveRole === 'underwriter') {
+    // Fetch unassigned deals (submitted_to_underwriting + no underwriter)
+    const { data: unassignedDeals } = await supabase
+      .from('deals')
+      .select(`
+        *,
+        applicants:deal_applicants(first_name, last_name, applicant_number, experian_score),
+        manager_user:users!deals_assigned_manager_fkey(first_name, last_name)
+      `)
+      .eq('status', 'submitted_to_underwriting')
+      .is('assigned_underwriter', null)
+      .order('created_at', { ascending: true });
+
+    // Fetch my active deals
+    const { data: myDeals } = await supabase
+      .from('deals')
+      .select(`
+        *,
+        applicants:deal_applicants(first_name, last_name, applicant_number, experian_score),
+        manager_user:users!deals_assigned_manager_fkey(first_name, last_name)
+      `)
+      .eq('assigned_underwriter', authUser.id)
+      .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
+      .order('last_activity_at', { ascending: false });
+
+    // Fetch deal views for unread tracking
+    const { data: dealViewRows } = await supabase
+      .from('deal_views')
+      .select('deal_id, last_viewed_at')
+      .eq('user_id', authUser.id);
+
+    const dealViewsMap: Record<string, string> = {};
+    (dealViewRows || []).forEach((v: any) => {
+      dealViewsMap[v.deal_id] = v.last_viewed_at;
+    });
+
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold text-surface-900">
+            {greeting}, {userProfile.first_name}
+          </h1>
+          <p className="text-surface-500 mt-1">
+            Underwriting Dashboard
+          </p>
+        </div>
+        <UnderwriterDashboard
+          unassignedDeals={unassignedDeals || []}
+          myDeals={myDeals || []}
+          dealViews={dealViewsMap}
+        />
+        <div className="flex items-center justify-center py-4">
+          <span className="text-xs text-surface-400">
+            Signed in as {ROLE_LABELS[effectiveRole]}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
