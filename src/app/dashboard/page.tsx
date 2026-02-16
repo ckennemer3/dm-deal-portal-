@@ -198,7 +198,8 @@ export default async function DashboardPage() {
       *,
       applicants:deal_applicants(first_name, last_name, applicant_number, experian_score),
       manager_user:users!deals_assigned_manager_fkey(first_name, last_name),
-      underwriter_user:users!deals_assigned_underwriter_fkey(first_name, last_name)
+      underwriter_user:users!deals_assigned_underwriter_fkey(first_name, last_name),
+      submitter_user:users!deals_submitted_by_fkey(first_name, last_name)
     `)
     .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
     .order('created_at', { ascending: false });

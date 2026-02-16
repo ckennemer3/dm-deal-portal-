@@ -41,11 +41,7 @@ function getWholesaleDenominator(deal: any): number | null {
 
 function formatShortDate(dateStr: string): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: '2-digit',
-  });
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueueProps) {
@@ -67,6 +63,7 @@ export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueuePr
             <thead>
               <tr className="bg-surface-800">
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Date</th>
+                <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Agent</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Client</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Vehicle</th>
                 <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3 w-[100px]">Credit</th>
@@ -76,7 +73,7 @@ export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueuePr
                 {showPersonColumn && (
                   <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">{personColumnLabel}</th>
                 )}
-                <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Status</th>
+                <th className="text-center text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Status</th>
                 <th className="text-left text-xs font-semibold text-white/80 uppercase tracking-wider px-4 py-3">Age</th>
               </tr>
             </thead>
@@ -102,6 +99,11 @@ export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueuePr
                   >
                     <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
                       {formatShortDate(deal.created_at)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
+                      {deal.submitter_user
+                        ? `${deal.submitter_user.first_name.charAt(0)}. ${deal.submitter_user.last_name}`
+                        : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-surface-900 whitespace-nowrap">
                       {clientName}
@@ -134,8 +136,8 @@ export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueuePr
                         </td>
                       );
                     })()}
-                    <td className="px-4 py-3">
-                      <StatusBadge status={deal.status as DealStatus} />
+                    <td className="px-4 py-3 text-center">
+                      <StatusBadge status={deal.status as DealStatus} className="whitespace-nowrap" />
                     </td>
                     <td className="px-4 py-3 text-sm text-surface-500 whitespace-nowrap">
                       {formatDealAge(deal.created_at)}
