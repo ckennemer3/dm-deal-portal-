@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { DealFormData, DealType, DocumentType } from '@/lib/types';
 import { REQUIRED_DOCUMENTS, OPTIONAL_DOCUMENTS, DOCUMENT_TYPE_LABELS } from '@/lib/constants';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -10,9 +11,11 @@ interface StepDocumentsProps {
   pendingFiles: Map<string, File>;
   onFileSelect: (docType: string, file: File) => void;
   onFileRemove: (docType: string) => void;
+  otherDocLabel?: string;
+  onOtherLabelChange?: (label: string) => void;
 }
 
-export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemove }: StepDocumentsProps) {
+export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemove, otherDocLabel = '', onOtherLabelChange }: StepDocumentsProps) {
   const dealType = formData.deal_type;
   const condition = formData.vehicle_condition;
 
@@ -83,12 +86,23 @@ export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemo
         <h3 className="font-medium text-surface-900 mb-4">Optional Documents</h3>
         <div className="space-y-4">
           {OPTIONAL_DOCUMENTS.map((docType) => (
-            <FileUpload
-              key={docType}
-              label={DOCUMENT_TYPE_LABELS[docType]}
-              currentFile={getFileInfo(docType)}
-              onUpload={(file) => handleUpload(docType, file)}
-            />
+            <div key={docType}>
+              {docType === 'other' && (
+                <input
+                  type="text"
+                  value={otherDocLabel}
+                  onChange={(e) => onOtherLabelChange?.(e.target.value.slice(0, 50))}
+                  maxLength={50}
+                  placeholder="Describe the document (max 50 chars)"
+                  className="input text-sm py-1.5 mb-2"
+                />
+              )}
+              <FileUpload
+                label={docType === 'other' && otherDocLabel.trim() ? otherDocLabel : DOCUMENT_TYPE_LABELS[docType]}
+                currentFile={getFileInfo(docType)}
+                onUpload={(file) => handleUpload(docType, file)}
+              />
+            </div>
           ))}
         </div>
       </Card>

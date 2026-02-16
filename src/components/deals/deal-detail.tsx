@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
 import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments } from '@/lib/permissions';
-import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField } from '@/app/dashboard/deals/[id]/actions';
+import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField, respondToKickback } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
 import { AuditLog } from './audit-log';
@@ -27,6 +27,8 @@ interface DealDetailProps {
   user: UserWithRelations;
   underwriters: { id: string; first_name: string; last_name: string }[];
   auditEntries?: any[];
+  kickbackReasons?: any[];
+  userLastViewedAt?: string | null;
 }
 
 // Friendly labels for field names used in inline editing and deal history
@@ -241,7 +243,7 @@ function SectionEditButton({ editing, onClick }: { editing: boolean; onClick: ()
 }
 
 
-export function DealDetail({ deal, user, underwriters, auditEntries = [] }: DealDetailProps) {
+export function DealDetail({ deal, user, underwriters, auditEntries = [], kickbackReasons = [], userLastViewedAt }: DealDetailProps) {
   const router = useRouter();
   const [showKickbackModal, setShowKickbackModal] = useState(false);
   const [kickbackMessage, setKickbackMessage] = useState('');
@@ -251,12 +253,17 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
   const [loading, setLoading] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadDocType, setUploadDocType] = useState<string>('other');
+  const [customDocLabel, setCustomDocLabel] = useState('');
   const [uploadError, setUploadError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Section-level editing state
   const [editingVehicle, setEditingVehicle] = useState(false);
   const [editingStrengths, setEditingStrengths] = useState(false);
+
+  // Kickback banner state
+  const [kickbackResponseText, setKickbackResponseText] = useState('');
+  const [submittingKickbackResponse, setSubmittingKickbackResponse] = useState(false);
 
   const primaryApplicant = deal.applicants?.find((a: any) => a.applicant_number === 1);
   const clientName = primaryApplicant ? getFullName(primaryApplicant.first_name, primaryApplicant.last_name) : 'Unknown';
@@ -271,6 +278,46 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
     : deal.updated_at || deal.created_at;
 
   const refreshPage = useCallback(() => router.refresh(), [router]);
+
+  // ---- Kickback Banner Logic ----
+  // Only show banner for the most recent unresolved kickback
+  const latestKickback = kickbackReasons.length > 0 ? kickbackReasons[0] : null;
+
+  const kickbackBannerMode: 'recipient_needs_response' | 'kicker_first_view_response' | false = (() => {
+    if (!latestKickback) return false;
+
+    const isKickedBackStatus = deal.status === 'kicked_back_to_manager' || deal.status === 'kicked_back_to_sales';
+    const isRecipient = latestKickback.kicked_to_user_id === user.id;
+    const isKicker = latestKickback.kicked_by_user_id === user.id;
+
+    // Case 1: Recipient sees unresolved kickback while deal is in kicked_back status
+    if (isKickedBackStatus && isRecipient && !latestKickback.is_resolved) {
+      return 'recipient_needs_response';
+    }
+
+    // Case 2: Kicker sees the response on first view after it was submitted
+    if (isKicker && latestKickback.is_resolved && latestKickback.responded_at) {
+      const respondedAt = new Date(latestKickback.responded_at).getTime();
+      const lastViewed = userLastViewedAt ? new Date(userLastViewedAt).getTime() : 0;
+      if (respondedAt > lastViewed) {
+        return 'kicker_first_view_response';
+      }
+    }
+
+    return false;
+  })();
+
+  const handleKickbackResponse = async () => {
+    if (!latestKickback || !kickbackResponseText.trim()) return;
+    setSubmittingKickbackResponse(true);
+    try {
+      await respondToKickback(latestKickback.id, kickbackResponseText);
+      setKickbackResponseText('');
+      router.refresh();
+    } finally {
+      setSubmittingKickbackResponse(false);
+    }
+  };
 
   // ---- Determine if the deal has been sent to underwriting (for history logging threshold) ----
   const POST_UNDERWRITING_STATUSES: DealStatus[] = [
@@ -438,11 +485,15 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
     try {
       const fd = new FormData();
       fd.append('file', file);
+      if (uploadDocType === 'other' && customDocLabel.trim()) {
+        fd.append('customLabel', customDocLabel.trim());
+      }
       const result = await uploadDocument(deal.id, uploadDocType, null, fd);
       if (!result.success) {
         setUploadError(result.error);
         return;
       }
+      setCustomDocLabel('');
       router.refresh();
     } catch (err: any) {
       setUploadError(err.message || 'Failed to upload document');
@@ -480,6 +531,82 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
 
   return (
     <div className="space-y-6">
+      {/* Kickback Banner — Recipient needs to respond */}
+      {kickbackBannerMode === 'recipient_needs_response' && latestKickback && (
+        <div className="rounded-lg border-2 border-orange-300 bg-orange-50 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-orange-900">Deal Kicked Back</h3>
+              <p className="text-sm text-orange-800 mt-1">
+                <span className="font-medium">Reason:</span>{' '}
+                {KICKBACK_REASON_LABELS[latestKickback.reason_category as KickbackReason] || latestKickback.reason_category}
+              </p>
+              {latestKickback.reason_detail && (
+                <p className="text-sm text-orange-700 mt-1">{latestKickback.reason_detail}</p>
+              )}
+              <p className="text-xs text-orange-600 mt-1">
+                From {latestKickback.kicker ? `${latestKickback.kicker.first_name} ${latestKickback.kicker.last_name}` : 'Unknown'}{' '}
+                &mdash; {formatTimestamp(latestKickback.created_at)}
+              </p>
+              <div className="mt-3">
+                <textarea
+                  value={kickbackResponseText}
+                  onChange={(e) => setKickbackResponseText(e.target.value)}
+                  placeholder="Type your response to this kickback..."
+                  rows={3}
+                  className="input-base text-sm w-full"
+                />
+                <div className="mt-2">
+                  <Button
+                    size="sm"
+                    onClick={handleKickbackResponse}
+                    loading={submittingKickbackResponse}
+                    disabled={!kickbackResponseText.trim()}
+                  >
+                    Submit Response
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kickback Banner — Kicker sees the response (first view) */}
+      {kickbackBannerMode === 'kicker_first_view_response' && latestKickback && (
+        <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-blue-900">Kickback Response Received</h3>
+              <div className="mt-2 space-y-2">
+                <div className="text-sm">
+                  <span className="font-medium text-blue-800">Your kickback:</span>
+                  <p className="text-blue-700 mt-0.5">
+                    {KICKBACK_REASON_LABELS[latestKickback.reason_category as KickbackReason] || latestKickback.reason_category}
+                    {latestKickback.reason_detail && ` — ${latestKickback.reason_detail}`}
+                  </p>
+                </div>
+                <div className="text-sm">
+                  <span className="font-medium text-blue-800">
+                    Response from {latestKickback.responder ? `${latestKickback.responder.first_name} ${latestKickback.responder.last_name}` : 'Unknown'}:
+                  </span>
+                  <p className="text-blue-700 mt-0.5">{latestKickback.response_text}</p>
+                </div>
+                <p className="text-xs text-blue-500">
+                  Responded {formatTimestamp(latestKickback.responded_at)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -785,7 +912,9 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
                 deal.documents.map((doc: any) => (
                   <div key={doc.id} className="flex items-center justify-between py-2 border-b border-surface-100 last:border-0">
                     <p className="text-sm font-medium text-surface-900 min-w-0 flex-1">
-                      {DOCUMENT_TYPE_LABELS[doc.document_type as DocumentType] || doc.document_type}
+                      {doc.document_type === 'other' && doc.description
+                        ? doc.description
+                        : (DOCUMENT_TYPE_LABELS[doc.document_type as DocumentType] || doc.document_type)}
                     </p>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <button
@@ -820,12 +949,13 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
             {/* Upload section — agents (own deals), managers, admins */}
             {isActiveDeal && canUploadDocuments(user, deal) && (
               <div className="mt-4 pt-4 border-t border-surface-100">
+                <div className="space-y-2">
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
                     <label className="text-xs font-medium text-surface-500 mb-1 block">Document Type</label>
                     <select
                       value={uploadDocType}
-                      onChange={(e) => setUploadDocType(e.target.value)}
+                      onChange={(e) => { setUploadDocType(e.target.value); setCustomDocLabel(''); }}
                       className="input text-sm py-1.5"
                     >
                       {Object.entries(DOCUMENT_TYPE_LABELS).map(([value, label]) => (
@@ -841,6 +971,20 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [] }: Deal
                   >
                     Upload
                   </Button>
+                </div>
+                {uploadDocType === 'other' && (
+                  <div>
+                    <label className="text-xs font-medium text-surface-500 mb-1 block">Description (max 50 chars)</label>
+                    <input
+                      type="text"
+                      value={customDocLabel}
+                      onChange={(e) => setCustomDocLabel(e.target.value.slice(0, 50))}
+                      maxLength={50}
+                      placeholder="e.g., Bank Statement, Pay Stubs..."
+                      className="input text-sm py-1.5"
+                    />
+                  </div>
+                )}
                 </div>
                 <input
                   ref={fileInputRef}

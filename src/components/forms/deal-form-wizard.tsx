@@ -51,6 +51,7 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
 
   // Document files — stored separately since File objects aren't serializable
   const [pendingFiles, setPendingFiles] = useState<Map<string, File>>(new Map());
+  const [otherDocLabel, setOtherDocLabel] = useState('');
   const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
 
   const updateFormData = useCallback((updates: Partial<DealFormData>) => {
@@ -197,6 +198,9 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
           try {
             const fd = new FormData();
             fd.append('file', file);
+            if (docType === 'other' && otherDocLabel.trim()) {
+              fd.append('customLabel', otherDocLabel.trim());
+            }
             const uploadResult = await uploadDocument(dealId, docType, null, fd);
             if (!uploadResult.success) {
               console.error(`Failed to upload ${docType}:`, uploadResult.error);
@@ -228,6 +232,8 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
          pendingFiles={pendingFiles}
          onFileSelect={handleFileSelect}
          onFileRemove={handleFileRemove}
+         otherDocLabel={otherDocLabel}
+         onOtherLabelChange={setOtherDocLabel}
        />,
   };
 

@@ -19,6 +19,7 @@ export async function uploadDocument(
 
   const file = formData.get('file') as File;
   if (!file) return { success: false, error: 'No file provided' };
+  const customLabel = formData.get('customLabel') as string | null;
 
   // Validate file type
   const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
@@ -57,7 +58,9 @@ export async function uploadDocument(
       ? `${primaryApplicant.first_name} ${primaryApplicant.last_name}`
       : 'Unknown';
     const vehicleInfo = `${dealData.vehicle_year || ''} ${dealData.vehicle_model || ''}`.trim();
-    const docTypeLabel = DOCUMENT_TYPE_LABELS[documentType as DocumentType] || documentType;
+    const docTypeLabel = (documentType === 'other' && customLabel)
+      ? customLabel
+      : (DOCUMENT_TYPE_LABELS[documentType as DocumentType] || documentType);
 
     dynamicDisplayName = `${applicantName} - ${vehicleInfo} - ${docTypeLabel}.${ext}`;
   }
@@ -87,6 +90,7 @@ export async function uploadDocument(
     original_filename: file.name,
     storage_path: storagePath,
     display_name: dynamicDisplayName,
+    description: (documentType === 'other' && customLabel) ? customLabel : null,
     uploaded_by: user.id,
   });
 

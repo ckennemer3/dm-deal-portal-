@@ -243,7 +243,8 @@ export type AuditActionType =
   | 'message_sent'
   | 'action_required_resolved'
   | 'deal_claimed'
-  | 'deal_reassigned';
+  | 'deal_reassigned'
+  | 'kickback_responded';
 
 export interface AuditLogEntry {
   id: string;
@@ -307,7 +308,14 @@ export interface KickbackReasonEntry {
   kicked_to_user_id: string | null;
   reason_category: KickbackReasonCategory;
   reason_detail: string | null;
+  response_text: string | null;
+  responded_by: string | null;
+  responded_at: string | null;
+  is_resolved: boolean;
+  resolved_at: string | null;
   created_at: string;
+  kicker?: User;
+  responder?: User;
 }
 
 // === Form Types ===

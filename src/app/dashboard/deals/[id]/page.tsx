@@ -70,8 +70,30 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     .eq('deal_id', dealId)
     .order('created_at', { ascending: false });
 
+  // Fetch kickback reasons for banner display
+  const { data: kickbackReasons } = await supabase
+    .from('kickback_reasons')
+    .select('*')
+    .eq('deal_id', dealId)
+    .order('created_at', { ascending: false });
+
+  // Fetch current user's last_viewed_at for first-view banner logic
+  const { data: userDealView } = await supabase
+    .from('deal_views')
+    .select('last_viewed_at')
+    .eq('deal_id', dealId)
+    .eq('user_id', authUser.id)
+    .maybeSingle();
+
   // Collect audit log user IDs too
   (auditEntries || []).forEach((a: any) => { if (a.user_id) allUserIds.add(a.user_id); });
+
+  // Collect kickback reason user IDs
+  (kickbackReasons || []).forEach((kr: any) => {
+    if (kr.kicked_by_user_id) allUserIds.add(kr.kicked_by_user_id);
+    if (kr.kicked_to_user_id) allUserIds.add(kr.kicked_to_user_id);
+    if (kr.responded_by) allUserIds.add(kr.responded_by);
+  });
 
   // Fetch all referenced users in one query
   const { data: relatedUsers } = allUserIds.size > 0
@@ -97,6 +119,13 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     user: usersMap[a.user_id] || null,
   }));
 
+  // Attach user data to kickback reasons
+  const enrichedKickbackReasons = (kickbackReasons || []).map((kr: any) => ({
+    ...kr,
+    kicker: usersMap[kr.kicked_by_user_id] || null,
+    responder: kr.responded_by ? usersMap[kr.responded_by] || null : null,
+  }));
+
   // Compute latest unresolved action_required timestamp for timer display
   const unresolvedActions = (deal.messages || [])
     .filter((m: any) => m.message_type === 'action_required' && !m.is_resolved)
@@ -120,6 +149,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       user={userProfile}
       underwriters={underwriters || []}
       auditEntries={enrichedAuditEntries}
+      kickbackReasons={enrichedKickbackReasons}
+      userLastViewedAt={userDealView?.last_viewed_at || null}
     />
   );
 }

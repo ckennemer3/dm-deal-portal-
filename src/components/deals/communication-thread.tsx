@@ -22,7 +22,7 @@ export function CommunicationThread({ dealId, messages, user, canSend, canSendAc
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
 
-  const sorted = [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const sorted = [...messages].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const handleSend = async (type: 'note' | 'action_required') => {
     if (!content.trim()) return;
@@ -115,7 +115,7 @@ export function CommunicationThread({ dealId, messages, user, canSend, canSendAc
             </Button>
             {canSendAction && (
               <Button size="sm" variant="primary" onClick={() => handleSend('action_required')} loading={sending} disabled={!content.trim()}>
-                Send Request
+                Send Comment
               </Button>
             )}
           </div>

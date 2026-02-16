@@ -210,6 +210,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
   action_required_resolved: 'Action Required Resolved',
   deal_claimed: 'Deal Claimed',
   deal_reassigned: 'Deal Reassigned',
+  kickback_responded: 'Kickback Response',
 };
 
 // === Reporting Date Range Presets ===

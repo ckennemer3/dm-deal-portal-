@@ -16,7 +16,7 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  const { data: deal } = await supabase.from('deals').select('status, deal_number').eq('id', dealId).single();
+  const { data: deal } = await supabase.from('deals').select('status, deal_number, submitted_by, assigned_manager').eq('id', dealId).single();
   if (!deal) throw new Error('Deal not found');
 
   const { error } = await supabase.from('deals').update({ status: newStatus }).eq('id', dealId);
@@ -67,9 +67,14 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
 
   // Insert normalized kickback reason for reporting
   if (isKickback && options?.kickbackReason) {
+    const kickedToUserId = newStatus === 'kicked_back_to_manager'
+      ? deal.assigned_manager
+      : deal.submitted_by;
+
     await supabase.from('kickback_reasons').insert({
       deal_id: dealId,
       kicked_by_user_id: user.id,
+      kicked_to_user_id: kickedToUserId || null,
       reason_category: options.kickbackReason,
       reason_detail: options.kickbackExplanation || null,
     }).then(({ error: kbError }) => {
@@ -324,4 +329,54 @@ export async function recordDealView(dealId: string) {
     },
     { onConflict: 'user_id,deal_id' }
   );
+}
+
+/**
+ * Submit a response to a kickback reason.
+ * Called by the kickback recipient (manager or agent) from the kickback banner.
+ * Marks the kickback as resolved and logs the response.
+ */
+export async function respondToKickback(kickbackReasonId: string, responseText: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  if (!responseText.trim()) throw new Error('Response text is required');
+
+  const now = new Date().toISOString();
+
+  const { data: kickback, error: fetchError } = await supabase
+    .from('kickback_reasons')
+    .select('deal_id, kicked_by_user_id, reason_category, reason_detail')
+    .eq('id', kickbackReasonId)
+    .single();
+
+  if (fetchError || !kickback) throw new Error('Kickback reason not found');
+
+  const { error } = await supabase
+    .from('kickback_reasons')
+    .update({
+      response_text: responseText.trim(),
+      responded_by: user.id,
+      responded_at: now,
+      is_resolved: true,
+      resolved_at: now,
+    })
+    .eq('id', kickbackReasonId);
+
+  if (error) throw new Error(error.message);
+
+  await logAuditEvent({
+    dealId: kickback.deal_id,
+    userId: user.id,
+    actionType: 'kickback_responded',
+    description: `Kickback response: ${responseText.trim().slice(0, 100)}`,
+    metadata: {
+      kickback_reason_id: kickbackReasonId,
+      reason_category: kickback.reason_category,
+    },
+  });
+
+  revalidatePath(`/dashboard/deals/${kickback.deal_id}`);
+  revalidatePath('/dashboard/deals');
 }
