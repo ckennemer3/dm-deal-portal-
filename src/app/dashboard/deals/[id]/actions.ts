@@ -299,11 +299,22 @@ export async function updateDealField(dealId: string, fieldName: string, oldValu
 
 /**
  * Record that the current user has viewed a deal (for unread tracking).
+ * Only tracks views for participants (agent, manager, underwriter).
+ * Executives and administrators are observers — their views are not recorded.
  */
 export async function recordDealView(dealId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
+
+  // Only record views for participant roles
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || ['executive', 'administrator'].includes(profile.role)) return;
 
   await supabase.from('deal_views').upsert(
     {

@@ -230,3 +230,19 @@ export function truncate(str: string, length: number): string {
   if (str.length <= length) return str;
   return str.slice(0, length) + '...';
 }
+
+/**
+ * Determine if a deal has unread activity for the current user.
+ * Compares deal.last_activity_at against the user's last view timestamp.
+ * Returns true if the deal has never been viewed or has activity newer than the last view.
+ */
+export function isDealUnread(
+  deal: { id: string; last_activity_at?: string; updated_at?: string },
+  dealViews: Record<string, string>
+): boolean {
+  const viewedAt = dealViews[deal.id];
+  if (!viewedAt) return true;
+  const lastActivity = deal.last_activity_at || deal.updated_at;
+  if (!lastActivity) return false;
+  return new Date(lastActivity) > new Date(viewedAt);
+}

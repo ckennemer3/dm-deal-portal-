@@ -242,6 +242,17 @@ export default async function DashboardPage() {
 
   const submittedDeals = submittedDealsResult.data ?? [];
 
+  // Fetch deal_views for unread tracking (all roles)
+  const { data: dealViewRows } = await supabase
+    .from('deal_views')
+    .select('deal_id, last_viewed_at')
+    .eq('user_id', authUser.id);
+
+  const dealViewsMap: Record<string, string> = {};
+  (dealViewRows || []).forEach((v: any) => {
+    dealViewsMap[v.deal_id] = v.last_viewed_at;
+  });
+
   // Quick actions for this role
   const quickActions = getQuickActions(effectiveRole);
 
@@ -274,17 +285,6 @@ export default async function DashboardPage() {
       .eq('assigned_underwriter', authUser.id)
       .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
       .order('last_activity_at', { ascending: false });
-
-    // Fetch deal views for unread tracking
-    const { data: dealViewRows } = await supabase
-      .from('deal_views')
-      .select('deal_id, last_viewed_at')
-      .eq('user_id', authUser.id);
-
-    const dealViewsMap: Record<string, string> = {};
-    (dealViewRows || []).forEach((v: any) => {
-      dealViewsMap[v.deal_id] = v.last_viewed_at;
-    });
 
     return (
       <div className="space-y-8">
@@ -324,7 +324,7 @@ export default async function DashboardPage() {
 
       {/* Active Deals Queue */}
       {submittedDeals.length > 0 && (
-        <SubmittedDealsQueue deals={submittedDeals} viewerRole={effectiveRole} />
+        <SubmittedDealsQueue deals={submittedDeals} viewerRole={effectiveRole} dealViews={dealViewsMap} />
       )}
 
       {/* Summary Stat Cards */}

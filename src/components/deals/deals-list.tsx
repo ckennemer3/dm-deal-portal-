@@ -10,15 +10,16 @@ import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatRelativeTime, formatDealAge, toTitleCase } from '@/lib/utils';
+import { formatRelativeTime, formatDealAge, toTitleCase, isDealUnread } from '@/lib/utils';
 import { canSubmitDeals } from '@/lib/permissions';
 
 interface DealsListProps {
   deals: any[];
   user: UserWithRelations;
+  dealViews?: Record<string, string>;
 }
 
-export function DealsList({ deals, user }: DealsListProps) {
+export function DealsList({ deals, user, dealViews = {} }: DealsListProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -82,14 +83,20 @@ export function DealsList({ deals, user }: DealsListProps) {
                 {filtered.map((deal: any) => {
                   const app = deal.applicants?.find((a: any) => a.applicant_number === 1);
                   const clientName = app ? toTitleCase(`${app.first_name} ${app.last_name}`) : 'Unknown';
+                  const unread = isDealUnread(deal, dealViews);
                   return (
                     <tr
                       key={deal.id}
                       onClick={() => router.push(`/dashboard/deals/${deal.id}`)}
-                      className="hover:bg-surface-50 transition-colors cursor-pointer"
+                      className={`hover:bg-surface-50 transition-colors cursor-pointer ${
+                        unread ? 'border-l-4 border-l-brand-400 bg-brand-50/50' : ''
+                      }`}
                     >
                       <td className="px-6 py-3 text-sm font-medium text-brand-600">
                         {deal.deal_number}
+                        {unread && (
+                          <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-brand-500" />
+                        )}
                       </td>
                       <td className="px-6 py-3 text-sm text-surface-900">{clientName}</td>
                       <td className="px-6 py-3 text-sm text-surface-600">

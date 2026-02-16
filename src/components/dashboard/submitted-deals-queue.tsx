@@ -11,11 +11,13 @@ import {
   formatPercentage,
   getLTVColor,
   toTitleCase,
+  isDealUnread,
 } from '@/lib/utils';
 
 interface SubmittedDealsQueueProps {
   deals: any[];
   viewerRole: UserRole;
+  dealViews?: Record<string, string>;
 }
 
 function getFinancingAmount(deal: any): number | null {
@@ -44,7 +46,7 @@ function formatShortDate(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueueProps) {
+export function SubmittedDealsQueue({ deals, viewerRole, dealViews = {} }: SubmittedDealsQueueProps) {
   // Managers see the underwriter name; underwriters see the manager name
   const showPersonColumn = viewerRole === 'manager' || viewerRole === 'underwriter' || viewerRole === 'executive' || viewerRole === 'administrator';
   const personColumnLabel = viewerRole === 'underwriter' ? 'Manager' : 'Underwriter';
@@ -90,12 +92,15 @@ export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueuePr
                 const financingAmount = getFinancingAmount(deal);
                 const retailLTV = calculateLTV(financingAmount, getRetailDenominator(deal));
                 const wholesaleLTV = calculateLTV(financingAmount, getWholesaleDenominator(deal));
+                const unread = isDealUnread(deal, dealViews);
 
                 return (
                   <tr
                     key={deal.id}
                     onClick={() => router.push(`/dashboard/deals/${deal.id}`)}
-                    className="hover:bg-surface-50 transition-colors cursor-pointer"
+                    className={`hover:bg-surface-50 transition-colors cursor-pointer ${
+                      unread ? 'border-l-4 border-l-brand-400 bg-brand-50/50' : ''
+                    }`}
                   >
                     <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
                       {formatShortDate(deal.created_at)}
@@ -107,6 +112,9 @@ export function SubmittedDealsQueue({ deals, viewerRole }: SubmittedDealsQueuePr
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-surface-900 whitespace-nowrap">
                       {clientName}
+                      {unread && (
+                        <span className="ml-1.5 inline-block w-2 h-2 rounded-full bg-brand-500" />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
                       {deal.vehicle_year} {toTitleCase(deal.vehicle_make)} {toTitleCase(deal.vehicle_model)}

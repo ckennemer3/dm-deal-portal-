@@ -24,7 +24,16 @@ export default async function DealsPage() {
     query = query.eq('submitted_by', authUser.id);
   }
 
-  const { data: deals } = await query;
+  const [dealsResult, dealViewsResult] = await Promise.all([
+    query,
+    supabase.from('deal_views').select('deal_id, last_viewed_at').eq('user_id', authUser.id),
+  ]);
 
-  return <DealsList deals={deals || []} user={userProfile} />;
+  const deals = dealsResult.data ?? [];
+  const dealViewsMap: Record<string, string> = {};
+  (dealViewsResult.data || []).forEach((v: any) => {
+    dealViewsMap[v.deal_id] = v.last_viewed_at;
+  });
+
+  return <DealsList deals={deals} user={userProfile} dealViews={dealViewsMap} />;
 }

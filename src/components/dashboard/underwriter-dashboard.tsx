@@ -13,6 +13,7 @@ import {
   formatPercentage,
   getLTVColor,
   toTitleCase,
+  isDealUnread,
 } from '@/lib/utils';
 import { claimDeal } from '@/app/dashboard/deals/[id]/actions';
 
@@ -68,13 +69,6 @@ export function UnderwriterDashboard({ unassignedDeals, myDeals, dealViews }: Un
     } finally {
       setClaimingDealId(null);
     }
-  }
-
-  function isUnread(deal: any): boolean {
-    const viewedAt = dealViews[deal.id];
-    if (!viewedAt) return true;
-    const lastActivity = deal.last_activity_at || deal.updated_at;
-    return new Date(lastActivity) > new Date(viewedAt);
   }
 
   return (
@@ -221,7 +215,7 @@ export function UnderwriterDashboard({ unassignedDeals, myDeals, dealViews }: Un
                     const creditScore = primaryApplicant?.experian_score ?? null;
                     const financingAmount = getFinancingAmount(deal);
                     const retailLTV = calculateLTV(financingAmount, getRetailDenominator(deal));
-                    const unread = isUnread(deal);
+                    const unread = isDealUnread(deal, dealViews);
 
                     return (
                       <tr
