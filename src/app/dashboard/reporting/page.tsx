@@ -10,7 +10,7 @@ export default async function ReportingPage() {
   const { data: userProfile } = await supabase
     .from('users').select('*').eq('id', authUser.id).single();
 
-  if (!userProfile || !['executive', 'administrator'].includes(userProfile.role)) {
+  if (!userProfile) {
     redirect('/dashboard');
   }
 

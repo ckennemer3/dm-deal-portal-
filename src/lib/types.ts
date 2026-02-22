@@ -1,6 +1,6 @@
 // === User & Organization Types ===
 
-export type UserRole = 'agent' | 'manager' | 'underwriter' | 'executive' | 'administrator';
+export type UserRole = 'agent' | 'manager' | 'general_manager' | 'underwriter' | 'executive' | 'administrator';
 
 export interface User {
   id: string;

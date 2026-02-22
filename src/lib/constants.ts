@@ -4,6 +4,7 @@ import { DealStatus, DealType, DocumentType, KickbackReason, KickbackReasonCateg
 export const ROLE_LABELS: Record<UserRole, string> = {
   agent: 'Agent',
   manager: 'Manager',
+  general_manager: 'General Manager',
   underwriter: 'Underwriter',
   executive: 'Executive',
   administrator: 'Administrator',
@@ -90,7 +91,7 @@ export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles:
   },
   pending_manager_review: {
     next: ['submitted_to_underwriting', 'kicked_back_to_sales', 'cancelled'],
-    roles: ['manager', 'administrator'],
+    roles: ['manager', 'general_manager', 'administrator'],
   },
   submitted_to_underwriting: {
     next: ['submitted_to_lender', 'kicked_back_to_manager', 'cancelled'],
@@ -98,7 +99,7 @@ export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles:
   },
   kicked_back_to_manager: {
     next: ['submitted_to_underwriting', 'kicked_back_to_sales', 'cancelled'],
-    roles: ['manager', 'administrator'],
+    roles: ['manager', 'general_manager', 'administrator'],
   },
   kicked_back_to_sales: {
     next: ['pending_manager_review', 'cancelled'],
@@ -110,7 +111,7 @@ export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles:
   },
   approved: {
     next: ['signed_and_delivered', 'cancelled'],
-    roles: ['agent', 'manager', 'underwriter', 'administrator'],
+    roles: ['agent', 'manager', 'general_manager', 'underwriter', 'administrator'],
   },
   signed_and_delivered: {
     next: [],

@@ -692,7 +692,7 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
           )}
 
           {/* Anyone: Mark approved deals as signed & delivered */}
-          {deal.status === 'approved' && (user.role === 'agent' || user.role === 'manager' || user.role === 'underwriter' || user.role === 'administrator') && (
+          {deal.status === 'approved' && (user.role === 'agent' || user.role === 'manager' || user.role === 'general_manager' || user.role === 'underwriter' || user.role === 'administrator') && (
             <Button onClick={handleComplete} loading={loading}>Mark Signed & Delivered</Button>
           )}
 

@@ -6,9 +6,10 @@ import { STATUS_TRANSITIONS } from './constants';
 const ROLE_HIERARCHY: Record<UserRole, number> = {
   agent: 1,
   manager: 2,
-  underwriter: 3,
-  executive: 4,
-  administrator: 5,
+  general_manager: 3,
+  underwriter: 4,
+  executive: 5,
+  administrator: 6,
 };
 
 export function hasMinimumRole(userRole: UserRole, requiredRole: UserRole): boolean {
@@ -22,11 +23,29 @@ export function canAccessAdminPanel(role: UserRole): boolean {
 }
 
 export function canAccessReporting(role: UserRole): boolean {
-  return role === 'executive' || role === 'administrator';
+  // All roles can access reporting (My Metrics tab is available to everyone)
+  return true;
 }
 
 export function canSubmitDeals(role: UserRole): boolean {
   return role === 'agent' || role === 'administrator';
+}
+
+// === Reporting Permissions ===
+
+/** Can view Manager Scorecard, Response Times, Approval Metrics, Volume tabs */
+export function canViewFullReporting(role: UserRole): boolean {
+  return ['manager', 'general_manager', 'executive', 'administrator'].includes(role);
+}
+
+/** Can view individual underwriter rankings and UW-internal metrics */
+export function canViewUWInternals(role: UserRole): boolean {
+  return role === 'executive' || role === 'administrator';
+}
+
+/** Can view reporting data across all offices (not scoped to own office) */
+export function canViewAllOfficeReporting(role: UserRole): boolean {
+  return ['general_manager', 'executive', 'administrator'].includes(role);
 }
 
 // === Deal Visibility ===
@@ -38,6 +57,7 @@ export function canViewDeal(user: User, deal: Deal): boolean {
     case 'manager':
       // Manager can see deals from their team (checked at query level)
       return true;
+    case 'general_manager':
     case 'underwriter':
     case 'executive':
     case 'administrator':
@@ -55,6 +75,7 @@ export function canEditDealFields(user: User, deal: Deal): boolean {
       return deal.submitted_by === user.id &&
         (deal.status === 'kicked_back_to_sales' || deal.status === 'pending');
     case 'manager':
+    case 'general_manager':
       return deal.status !== 'signed_and_delivered' && deal.status !== 'cancelled';
     case 'administrator':
       return true;
@@ -90,7 +111,8 @@ export function canUploadDocuments(user: User, deal: Deal): boolean {
     case 'agent':
       return deal.submitted_by === user.id;
     case 'manager':
-      return true; // Managers can upload on deals in their scope
+    case 'general_manager':
+      return true;
     case 'administrator':
       return true;
     default:
@@ -103,6 +125,7 @@ export function canDeleteDocuments(user: User, deal: Deal): boolean {
     case 'agent':
       return deal.submitted_by === user.id;
     case 'manager':
+    case 'general_manager':
     case 'administrator':
       return true;
     default:
@@ -115,6 +138,7 @@ export function canReplaceDocuments(user: User, deal: Deal): boolean {
     case 'agent':
       return deal.submitted_by === user.id;
     case 'manager':
+    case 'general_manager':
     case 'administrator':
       return true;
     default:
@@ -129,6 +153,7 @@ export function canSendMessage(user: User, deal: Deal): boolean {
     case 'agent':
       return deal.submitted_by === user.id;
     case 'manager':
+    case 'general_manager':
     case 'underwriter':
     case 'administrator':
       return true;
@@ -140,6 +165,7 @@ export function canSendMessage(user: User, deal: Deal): boolean {
 export function canSendActionRequired(user: User, deal: Deal): boolean {
   switch (user.role) {
     case 'manager':
+    case 'general_manager':
     case 'underwriter':
     case 'administrator':
       return true;
@@ -170,9 +196,9 @@ export function canReassignDeal(user: User): boolean {
 // === Manager Actions ===
 
 export function canApproveAndForward(user: User, deal: Deal): boolean {
-  // Manager can send to UW from initial review or after UW kicks it back
+  // Manager/GM can send to UW from initial review or after UW kicks it back
   return (
-    (user.role === 'manager' || user.role === 'administrator') &&
+    (user.role === 'manager' || user.role === 'general_manager' || user.role === 'administrator') &&
     (deal.status === 'pending_manager_review' || deal.status === 'kicked_back_to_manager')
   );
 }
@@ -186,8 +212,8 @@ export function canKickBackToManager(user: User, deal: Deal): boolean {
 }
 
 export function canKickBackToSales(user: User, deal: Deal): boolean {
-  // Manager can kick back to agent from review or after UW kicked back to them
-  if (user.role === 'manager' || user.role === 'administrator') {
+  // Manager/GM can kick back to agent from review or after UW kicked back to them
+  if (user.role === 'manager' || user.role === 'general_manager' || user.role === 'administrator') {
     return deal.status === 'pending_manager_review' || deal.status === 'kicked_back_to_manager';
   }
   return false;

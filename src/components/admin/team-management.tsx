@@ -26,7 +26,7 @@ export function TeamManagement({ teams, offices, users }: TeamManagementProps) {
 
   const officeOptions = offices.map((o) => ({ value: o.id, label: o.name }));
   const managerOptions = users
-    .filter((u) => u.role === 'manager')
+    .filter((u) => u.role === 'manager' || u.role === 'general_manager')
     .map((u) => ({ value: u.id, label: getFullName(u.first_name, u.last_name) }));
 
   const handleCreate = async () => {

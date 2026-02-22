@@ -244,7 +244,7 @@ export function UserManagement({ users, offices, teams }: UserManagementProps) {
             onChange={(e) => {
               const role = e.target.value as UserRole;
               const needsOffice = role !== 'underwriter';
-              const needsTeam = role === 'agent' || role === 'manager';
+              const needsTeam = role === 'agent' || role === 'manager' || role === 'general_manager';
               setNewUser(p => ({
                 ...p,
                 role,
@@ -257,7 +257,7 @@ export function UserManagement({ users, offices, teams }: UserManagementProps) {
               value={newUser.primary_office_id}
               onChange={(e) => handleCreateOfficeChange(e.target.value)} />
           )}
-          {(newUser.role === 'agent' || newUser.role === 'manager') && (
+          {(newUser.role === 'agent' || newUser.role === 'manager' || newUser.role === 'general_manager') && (
             <Select
               label="Team"
               options={[{ value: '', label: newUser.primary_office_id ? 'No team' : 'Select an office first' }, ...createTeamOptions]}
@@ -298,7 +298,7 @@ export function UserManagement({ users, offices, teams }: UserManagementProps) {
               onChange={(e) => {
                 const role = e.target.value as UserRole;
                 const needsOffice = role !== 'underwriter';
-                const needsTeam = role === 'agent' || role === 'manager';
+                const needsTeam = role === 'agent' || role === 'manager' || role === 'general_manager';
                 setEditingUser(p => p ? {
                   ...p,
                   role,
@@ -311,7 +311,7 @@ export function UserManagement({ users, offices, teams }: UserManagementProps) {
                 value={editingUser.primary_office_id || ''}
                 onChange={(e) => handleEditOfficeChange(e.target.value)} />
             )}
-            {(editingUser.role === 'agent' || editingUser.role === 'manager') && (
+            {(editingUser.role === 'agent' || editingUser.role === 'manager' || editingUser.role === 'general_manager') && (
               <Select
                 label="Team"
                 options={[{ value: '', label: editingUser.primary_office_id ? 'No team' : 'Select an office first' }, ...editTeamOptions]}
