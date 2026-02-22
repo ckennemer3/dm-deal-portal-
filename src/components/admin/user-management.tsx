@@ -241,16 +241,30 @@ export function UserManagement({ users, offices, teams }: UserManagementProps) {
           <Input label="Password" type="password" required value={newUser.password}
             onChange={(e) => setNewUser(p => ({ ...p, password: e.target.value }))} />
           <Select label="Role" required options={roleOptions} value={newUser.role}
-            onChange={(e) => setNewUser(p => ({ ...p, role: e.target.value as UserRole }))} />
-          <Select label="Primary Office" options={[{ value: '', label: 'No office' }, ...officeOptions]}
-            value={newUser.primary_office_id}
-            onChange={(e) => handleCreateOfficeChange(e.target.value)} />
-          <Select
-            label="Team"
-            options={[{ value: '', label: newUser.primary_office_id ? 'No team' : 'Select an office first' }, ...createTeamOptions]}
-            value={newUser.team_id}
-            onChange={(e) => setNewUser(p => ({ ...p, team_id: e.target.value }))}
-          />
+            onChange={(e) => {
+              const role = e.target.value as UserRole;
+              const needsOffice = role !== 'underwriter';
+              const needsTeam = role === 'agent' || role === 'manager';
+              setNewUser(p => ({
+                ...p,
+                role,
+                primary_office_id: needsOffice ? p.primary_office_id : '',
+                team_id: needsTeam ? p.team_id : '',
+              }));
+            }} />
+          {newUser.role !== 'underwriter' && (
+            <Select label="Primary Office" options={[{ value: '', label: 'No office' }, ...officeOptions]}
+              value={newUser.primary_office_id}
+              onChange={(e) => handleCreateOfficeChange(e.target.value)} />
+          )}
+          {(newUser.role === 'agent' || newUser.role === 'manager') && (
+            <Select
+              label="Team"
+              options={[{ value: '', label: newUser.primary_office_id ? 'No team' : 'Select an office first' }, ...createTeamOptions]}
+              value={newUser.team_id}
+              onChange={(e) => setNewUser(p => ({ ...p, team_id: e.target.value }))}
+            />
+          )}
         </div>
       </Modal>
 
@@ -281,16 +295,30 @@ export function UserManagement({ users, offices, teams }: UserManagementProps) {
                 onChange={(e) => setEditingUser(p => p ? { ...p, last_name: e.target.value } : null)} />
             </div>
             <Select label="Role" options={roleOptions} value={editingUser.role}
-              onChange={(e) => setEditingUser(p => p ? { ...p, role: e.target.value as UserRole } : null)} />
-            <Select label="Primary Office" options={[{ value: '', label: 'No office' }, ...officeOptions]}
-              value={editingUser.primary_office_id || ''}
-              onChange={(e) => handleEditOfficeChange(e.target.value)} />
-            <Select
-              label="Team"
-              options={[{ value: '', label: editingUser.primary_office_id ? 'No team' : 'Select an office first' }, ...editTeamOptions]}
-              value={editingUser.team_id || ''}
-              onChange={(e) => setEditingUser(p => p ? { ...p, team_id: e.target.value || null } : null)}
-            />
+              onChange={(e) => {
+                const role = e.target.value as UserRole;
+                const needsOffice = role !== 'underwriter';
+                const needsTeam = role === 'agent' || role === 'manager';
+                setEditingUser(p => p ? {
+                  ...p,
+                  role,
+                  primary_office_id: needsOffice ? p.primary_office_id : null,
+                  team_id: needsTeam ? p.team_id : null,
+                } : null);
+              }} />
+            {editingUser.role !== 'underwriter' && (
+              <Select label="Primary Office" options={[{ value: '', label: 'No office' }, ...officeOptions]}
+                value={editingUser.primary_office_id || ''}
+                onChange={(e) => handleEditOfficeChange(e.target.value)} />
+            )}
+            {(editingUser.role === 'agent' || editingUser.role === 'manager') && (
+              <Select
+                label="Team"
+                options={[{ value: '', label: editingUser.primary_office_id ? 'No team' : 'Select an office first' }, ...editTeamOptions]}
+                value={editingUser.team_id || ''}
+                onChange={(e) => setEditingUser(p => p ? { ...p, team_id: e.target.value || null } : null)}
+              />
+            )}
             <div className="flex items-center gap-3 pt-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
