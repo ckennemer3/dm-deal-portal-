@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { AdminPanel } from '@/components/admin/admin-panel';
 
@@ -27,7 +27,11 @@ export default async function AdminPage() {
     .select('*')
     .order('name');
 
-  const { data: teams } = await supabase
+  // Use admin client for teams query to bypass RLS — the users table has
+  // restrictive SELECT policies that cause teams with NULL manager_id to be
+  // silently excluded when joined via the regular RLS-enforced client.
+  const adminClient = createAdminClient();
+  const { data: teams } = await adminClient
     .from('teams')
     .select('*, office:offices(*), manager:users!teams_manager_id_fkey(id, first_name, last_name)')
     .order('name');
