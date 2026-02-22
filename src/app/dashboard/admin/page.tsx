@@ -31,10 +31,14 @@ export default async function AdminPage() {
   // restrictive SELECT policies that cause teams with NULL manager_id to be
   // silently excluded when joined via the regular RLS-enforced client.
   const adminClient = createAdminClient();
-  const { data: teams } = await adminClient
+  const { data: teams, error: teamsError } = await adminClient
     .from('teams')
-    .select('*, office:offices(*), manager:users!teams_manager_id_fkey(id, first_name, last_name)')
+    .select('*, office:offices(*), manager:users!fk_teams_manager(id, first_name, last_name)')
     .order('name');
+
+  if (teamsError) {
+    console.error('Teams query failed:', teamsError.message);
+  }
 
   return (
     <AdminPanel
