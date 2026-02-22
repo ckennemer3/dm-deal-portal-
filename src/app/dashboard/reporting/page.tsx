@@ -1,93 +1,129 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { UserRole } from '@/lib/types';
 import { ReportingDashboard } from '@/components/reporting/reporting-dashboard';
+import {
+  resolveFiltersFromSearchParams,
+  fetchReportingData,
+  buildFilterOptions,
+  computeOverviewKPIs,
+  computeManagerScorecard,
+  computeResponseTimeKPIs,
+  computeManagerResponseTimes,
+  computeUnderwriterResponseTimes,
+  computeAgentResponseTimes,
+  computeBottleneckData,
+  computeApprovalByCredit,
+  computeApprovalByLTV,
+  computeApprovalByDealType,
+  computeMonthlyVolume,
+  computeVolumeByOffice,
+  computeVolumeByPerson,
+  computeMyMetrics,
+  computeKickbackReasonBreakdown,
+} from '@/lib/reporting-queries';
 
-export default async function ReportingPage() {
+export default async function ReportingPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect('/auth/login');
 
   const { data: userProfile } = await supabase
-    .from('users').select('*').eq('id', authUser.id).single();
+    .from('users').select('*, team:teams!users_team_id_fkey(*, office:offices(*))').eq('id', authUser.id).single();
 
   if (!userProfile) {
     redirect('/dashboard');
   }
 
-  // Fetch deals with applicant credit scores for reporting
-  const { data: deals } = await supabase
-    .from('deals')
-    .select(`
-      *,
-      submitter:users!deals_submitted_by_fkey(id, first_name, last_name, team_id),
-      applicants:deal_applicants(first_name, last_name, applicant_number, experian_score)
-    `)
-    .order('created_at', { ascending: false });
+  // Read effective role (admin "View As" cookie)
+  const cookieStore = await cookies();
+  const viewAsRole = cookieStore.get('viewAsRole')?.value as UserRole | undefined;
+  const effectiveRole: UserRole = (userProfile.role === 'administrator' && viewAsRole)
+    ? viewAsRole
+    : userProfile.role;
 
-  // Fetch offices and teams for filters
-  const { data: offices } = await supabase.from('offices').select('*').order('name');
-  const { data: teams } = await supabase.from('teams').select('*, office:offices(name)').order('name');
-  const { data: agents } = await supabase.from('users').select('id, first_name, last_name, team_id')
-    .eq('role', 'agent').eq('is_active', true).order('last_name');
+  // Parse filters from URL search params
+  const params = await searchParams;
+  const filters = resolveFiltersFromSearchParams(params);
+  const activeTab = params.tab || (effectiveRole === 'agent' || effectiveRole === 'underwriter' ? 'my-metrics' : 'overview');
 
-  // Fetch kickback reasons for breakdown analytics
-  const { data: kickbackReasons } = await supabase
-    .from('kickback_reasons')
-    .select('*')
-    .order('created_at', { ascending: false });
+  // Fetch data with filters applied
+  const reportingData = await fetchReportingData(
+    {
+      id: userProfile.id,
+      role: effectiveRole,
+      team_id: userProfile.team_id,
+      primary_office_id: userProfile.primary_office_id,
+    },
+    filters
+  );
 
-  // Fetch status history with timestamps for response time calculations
-  const { data: rawStatusHistory } = await supabase
-    .from('deal_status_history')
-    .select('deal_id, from_status, to_status, changed_at, changed_by')
-    .order('changed_at', { ascending: true });
+  const { deals, statusHistory, messages, kickbackReasons, users, offices, teams } = reportingData;
 
-  // Compute hours_in_status client-side by comparing consecutive transitions per deal
-  const statusHistory = computeStatusDurations(rawStatusHistory || [], deals || []);
+  // Build filter dropdown options
+  const filterOptions = buildFilterOptions(users, offices, teams);
+
+  // Compute metrics for the active tab (skip unused tabs for performance)
+  const data: Record<string, any> = {};
+
+  if (activeTab === 'overview') {
+    data.overviewKPIs = computeOverviewKPIs(deals, statusHistory);
+    data.deals = deals;
+    data.statusHistory = statusHistory;
+    data.users = users;
+    data.offices = offices;
+    data.teams = teams;
+  }
+
+  if (activeTab === 'manager-scorecard') {
+    data.managerScorecard = computeManagerScorecard(deals, statusHistory, messages, users, offices);
+    data.kickbackReasonBreakdown = computeKickbackReasonBreakdown(kickbackReasons);
+    data.deals = deals;
+    data.statusHistory = statusHistory;
+    data.users = users;
+  }
+
+  if (activeTab === 'response') {
+    data.responseTimeKPIs = computeResponseTimeKPIs(statusHistory, deals);
+    data.managerResponseTimes = computeManagerResponseTimes(deals, statusHistory, messages, users, offices);
+    data.underwriterResponseTimes = computeUnderwriterResponseTimes(deals, statusHistory, messages, users);
+    data.agentResponseTimes = computeAgentResponseTimes(deals, statusHistory, messages, users, teams);
+    data.bottleneck = computeBottleneckData(statusHistory, deals);
+  }
+
+  if (activeTab === 'approval') {
+    data.approvalByCredit = computeApprovalByCredit(deals);
+    data.approvalByLTV = computeApprovalByLTV(deals);
+    data.approvalByDealType = computeApprovalByDealType(deals);
+    data.deals = deals;
+  }
+
+  if (activeTab === 'volume') {
+    data.monthlyVolume = computeMonthlyVolume(deals);
+    data.volumeByOffice = computeVolumeByOffice(deals, users, offices);
+    data.volumeByManager = computeVolumeByPerson(deals, 'assigned_manager', users);
+    data.volumeByUnderwriter = computeVolumeByPerson(deals, 'assigned_underwriter', users);
+    data.deals = deals;
+    data.users = users;
+  }
+
+  if (activeTab === 'my-metrics') {
+    data.myMetrics = computeMyMetrics(deals, statusHistory, messages, userProfile.id, effectiveRole, users);
+  }
 
   return (
     <ReportingDashboard
-      deals={deals || []}
-      offices={offices || []}
-      teams={teams || []}
-      agents={agents || []}
-      kickbackReasons={kickbackReasons || []}
-      statusHistory={statusHistory}
+      effectiveRole={effectiveRole}
+      filterOptions={filterOptions}
+      data={data}
+      activeTab={activeTab}
+      userId={userProfile.id}
+      userRole={userProfile.role}
     />
   );
-}
-
-/**
- * Compute hours spent in each status by comparing consecutive status transitions per deal.
- * Falls back to deal.created_at for the first transition.
- */
-function computeStatusDurations(
-  history: { deal_id: string; from_status: string; to_status: string; changed_at: string; changed_by: string }[],
-  deals: { id: string; created_at: string }[]
-): any[] {
-  const dealCreatedMap = new Map(deals.map(d => [d.id, d.created_at]));
-
-  // Group by deal_id (already sorted by changed_at asc)
-  const byDeal = new Map<string, typeof history>();
-  history.forEach(h => {
-    const arr = byDeal.get(h.deal_id) || [];
-    arr.push(h);
-    byDeal.set(h.deal_id, arr);
-  });
-
-  const enriched: any[] = [];
-  byDeal.forEach((transitions, dealId) => {
-    transitions.forEach((t, i) => {
-      const prevTime = i > 0
-        ? transitions[i - 1].changed_at
-        : dealCreatedMap.get(dealId) || t.changed_at;
-      const hours = (new Date(t.changed_at).getTime() - new Date(prevTime).getTime()) / 3600000;
-      enriched.push({
-        ...t,
-        hours_in_status: Math.max(0, +hours.toFixed(2)),
-      });
-    });
-  });
-
-  return enriched;
 }
