@@ -2,8 +2,32 @@
 
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { classifyQuartile } from '@/lib/reporting-queries';
 import { downloadCSV } from '../csv-export';
+
+/**
+ * Classify a value into quartile buckets for color coding.
+ * Inlined here to avoid importing server-only reporting-queries.ts.
+ */
+function classifyQuartile(
+  value: number,
+  allValues: number[],
+  lowerIsBetter: boolean
+): 'top' | 'middle' | 'bottom' {
+  if (allValues.length < 4) return 'middle';
+  const sorted = lowerIsBetter
+    ? [...allValues].sort((a, b) => a - b)
+    : [...allValues].sort((a, b) => b - a);
+  const q1 = sorted[Math.floor(sorted.length * 0.25)];
+  const q3 = sorted[Math.floor(sorted.length * 0.75)];
+  if (lowerIsBetter) {
+    if (value <= q1) return 'top';
+    if (value >= q3) return 'bottom';
+  } else {
+    if (value >= q1) return 'top';
+    if (value <= q3) return 'bottom';
+  }
+  return 'middle';
+}
 
 export interface SortableColumn<T> {
   key: keyof T & string;
