@@ -87,7 +87,7 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
                   <div className="w-2 h-2 rounded-full bg-status-danger mt-2 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-surface-900 truncate">
-                      {msg.deal?.deal_number} — Action Required
+                      {msg.deal?.deal_number} — Response Requested
                     </p>
                     <p className="text-xs text-surface-500 truncate mt-0.5">
                       From {msg.sender?.first_name} {msg.sender?.last_name}: {msg.content}

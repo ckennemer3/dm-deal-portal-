@@ -21,15 +21,18 @@ export function CommunicationThread({ dealId, messages, user, canSend, canSendAc
   const router = useRouter();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
+  const [responseRequested, setResponseRequested] = useState(false);
 
   const sorted = [...messages].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  const handleSend = async (type: 'note' | 'action_required') => {
+  const handleSend = async () => {
     if (!content.trim()) return;
     setSending(true);
     try {
+      const type = responseRequested ? 'action_required' : 'note';
       await sendMessage(dealId, content, type);
       setContent('');
+      setResponseRequested(false);
       router.refresh();
     } finally {
       setSending(false);
@@ -72,7 +75,7 @@ export function CommunicationThread({ dealId, messages, user, canSend, canSendAc
                       </span>
                       {isAction && (
                         <Badge variant={msg.is_resolved ? 'success' : 'warning'}>
-                          {msg.is_resolved ? 'Resolved' : 'Action Required'}
+                          {msg.is_resolved ? 'Resolved' : 'Response Requested'}
                         </Badge>
                       )}
                     </div>
@@ -82,7 +85,7 @@ export function CommunicationThread({ dealId, messages, user, canSend, canSendAc
                         {formatTimestamp(msg.created_at)} ({formatRelativeTime(msg.created_at)})
                       </span>
                       {viewedBy && <span className="text-xs text-surface-400">Viewed by {viewedBy}</span>}
-                      {isAction && !msg.is_resolved && !isOwn && (
+                      {isAction && !msg.is_resolved && isOwn && (
                         <button
                           onClick={() => handleResolve(msg.id)}
                           className="text-xs text-brand-600 hover:text-brand-700 font-medium"
@@ -110,13 +113,19 @@ export function CommunicationThread({ dealId, messages, user, canSend, canSendAc
             className="input-base mb-3 text-sm"
           />
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="secondary" onClick={() => handleSend('note')} loading={sending} disabled={!content.trim()}>
-              Send Note
+            <Button size="sm" variant="primary" onClick={handleSend} loading={sending} disabled={!content.trim()}>
+              Send Comment
             </Button>
             {canSendAction && (
-              <Button size="sm" variant="primary" onClick={() => handleSend('action_required')} loading={sending} disabled={!content.trim()}>
-                Send Comment
-              </Button>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={responseRequested}
+                  onChange={(e) => setResponseRequested(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-xs text-surface-600">Response Requested</span>
+              </label>
             )}
           </div>
         </div>

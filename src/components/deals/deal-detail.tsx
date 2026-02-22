@@ -2,8 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserWithRelations, DealStatus, KickbackReason } from '@/lib/types';
-import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DEAL_STATUS_CONFIG, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS } from '@/lib/constants';
+import { UserWithRelations, DealStatus, KickbackReason, AuditActionType, DocumentType } from '@/lib/types';
+import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DEAL_STATUS_CONFIG, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge, Badge } from '@/components/ui/badge';
@@ -13,14 +13,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
 import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments } from '@/lib/permissions';
-import { updateDealStatus, claimDeal, reassignDeal, sendMessage, resolveMessage, updateDealField, respondToKickback } from '@/app/dashboard/deals/[id]/actions';
+import { updateDealStatus, claimDeal, reassignDeal, sendMessage, updateDealField, respondToKickback } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
-import { AuditLog } from './audit-log';
 import { DealAgeTimer } from '@/components/ui/deal-age-timer';
 import { getTimerThresholdForStatus } from '@/lib/timer-utils';
-import { MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
-import type { DocumentType } from '@/lib/types';
 
 interface DealDetailProps {
   deal: any;
@@ -78,6 +75,84 @@ function formatFieldValue(fieldName: string, value: string | number | null | und
     return isNaN(num) ? strVal : num.toLocaleString();
   }
   return strVal;
+}
+
+/** Color dot for Deal History entries based on action type */
+function getActionColor(actionType: string): string {
+  switch (actionType) {
+    case 'status_changed':
+    case 'deal_resubmitted':
+      return 'bg-brand-400';
+    case 'deal_kicked_back':
+      return 'bg-orange-400';
+    case 'deal_claimed':
+    case 'deal_reassigned':
+      return 'bg-purple-400';
+    case 'document_uploaded':
+    case 'document_replaced':
+      return 'bg-emerald-400';
+    case 'document_deleted':
+      return 'bg-red-400';
+    case 'message_sent':
+    case 'action_required_resolved':
+      return 'bg-sky-400';
+    case 'field_changed':
+      return 'bg-amber-400';
+    case 'kickback_responded':
+      return 'bg-orange-400';
+    default:
+      return 'bg-surface-400';
+  }
+}
+
+/** Merged Deal History section — replaces old Deal History + Audit Log */
+function DealHistory({ entries }: { entries: any[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_LIMIT = 20;
+  const displayEntries = showAll ? entries : entries.slice(0, INITIAL_LIMIT);
+  const hasMore = entries.length > INITIAL_LIMIT;
+
+  return (
+    <Card padding="md">
+      <CardHeader title={`Deal History (${entries.length})`} />
+      <div className="mt-4 space-y-1">
+        {entries.length === 0 ? (
+          <p className="text-sm text-surface-500">No history yet.</p>
+        ) : (
+          <>
+            {displayEntries.map((entry) => {
+              const userName = entry.user
+                ? `${entry.user.first_name} ${entry.user.last_name}`
+                : 'System';
+              const actionLabel = AUDIT_ACTION_LABELS[entry.action_type as AuditActionType] || entry.action_type;
+
+              return (
+                <div key={entry.id} className="flex items-start gap-3 py-1.5 border-b border-surface-50 last:border-0">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getActionColor(entry.action_type)}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs font-medium text-surface-700">{userName}</span>
+                      <span className="text-xs text-surface-400">{actionLabel}</span>
+                    </div>
+                    <p className="text-xs text-surface-600">{entry.description}</p>
+                    <p className="text-xs text-surface-400">{formatTimestamp(entry.created_at)}</p>
+                  </div>
+                </div>
+              );
+            })}
+            {hasMore && (
+              <button
+                onClick={() => setShowAll(!showAll)}
+                className="text-xs text-brand-600 hover:text-brand-700 font-medium mt-2"
+              >
+                {showAll ? 'Show recent' : `Show all history (${entries.length})`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  );
 }
 
 // Inline editable field component
@@ -329,74 +404,6 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
   const hasBeenSentToUnderwriting = deal.status_history?.some(
     (h: any) => POST_UNDERWRITING_STATUSES.includes(h.to_status)
   ) || POST_UNDERWRITING_STATUSES.includes(deal.status);
-
-  // ---- Build merged Deal History ----
-  const buildDealHistory = () => {
-    const entries: Array<{
-      id: string;
-      type: 'status' | 'field_change';
-      timestamp: string;
-      changerName: string;
-      description: string;
-      detail?: string;
-    }> = [];
-
-    // Add status history entries
-    if (deal.status_history) {
-      for (const entry of deal.status_history) {
-        const changerName = entry.changer
-          ? `${entry.changer.first_name} ${entry.changer.last_name}`
-          : 'System';
-        const statusLabel = DEAL_STATUS_CONFIG[entry.to_status as DealStatus]?.label || entry.to_status;
-        entries.push({
-          id: `status-${entry.id}`,
-          type: 'status',
-          timestamp: entry.changed_at,
-          changerName,
-          description: `${changerName} changed status to ${statusLabel}`,
-          detail: entry.notes || undefined,
-        });
-      }
-    }
-
-    // Add field change entries (only show post-underwriting changes, per user request)
-    if (deal.field_changes) {
-      for (const change of deal.field_changes) {
-        // Determine if this change happened after the deal was first sent to underwriting
-        const firstUnderwritingSend = deal.status_history
-          ?.filter((h: any) => h.to_status === 'submitted_to_underwriting')
-          ?.sort((a: any, b: any) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime())?.[0];
-
-        const showChange = firstUnderwritingSend
-          ? new Date(change.changed_at).getTime() >= new Date(firstUnderwritingSend.changed_at).getTime()
-          : false;
-
-        if (!showChange) continue;
-
-        const changerName = change.changer
-          ? `${change.changer.first_name} ${change.changer.last_name}`
-          : 'Unknown';
-        const fieldLabel = FIELD_LABELS[change.field_name] || change.field_name;
-        const oldDisplay = formatFieldValue(change.field_name, change.old_value);
-        const newDisplay = formatFieldValue(change.field_name, change.new_value);
-
-        entries.push({
-          id: `field-${change.id}`,
-          type: 'field_change',
-          timestamp: change.changed_at,
-          changerName,
-          description: `${changerName} changed ${fieldLabel}`,
-          detail: `${oldDisplay} → ${newDisplay}`,
-        });
-      }
-    }
-
-    // Sort by timestamp descending (most recent first)
-    entries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    return entries;
-  };
-
-  const dealHistory = buildDealHistory();
 
   const handleApproveForward = async () => {
     setLoading(true);
@@ -869,35 +876,8 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
             </div>
           </Card>
 
-          {/* Deal History */}
-          <Card padding="md">
-            <CardHeader title="Deal History" />
-            <div className="mt-4 space-y-2">
-              {dealHistory.length === 0 ? (
-                <p className="text-sm text-surface-500">No history yet.</p>
-              ) : (
-                dealHistory.map((entry) => (
-                  <div key={entry.id} className="flex items-start gap-3 py-2 border-b border-surface-100 last:border-0">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                      entry.type === 'status' ? 'bg-brand-400' : 'bg-amber-400'
-                    }`} />
-                    <div className="min-w-0">
-                      <p className="text-sm text-surface-900">
-                        {entry.description}
-                      </p>
-                      {entry.detail && (
-                        <p className="text-xs text-surface-500 mt-0.5">{entry.detail}</p>
-                      )}
-                      <p className="text-xs text-surface-400 mt-0.5">{formatTimestamp(entry.timestamp)}</p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-
-          {/* Audit Log */}
-          <AuditLog entries={auditEntries} />
+          {/* Deal History (merged from audit log) */}
+          <DealHistory entries={auditEntries} />
         </div>
 
         {/* Right: Documents & Communication */}
@@ -1054,7 +1034,7 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
             <div className="flex items-center gap-2 mb-1">
               <span className="font-semibold text-surface-700 text-xs uppercase tracking-wide">Latest Note</span>
               {isAction && (
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Required</span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Response Requested</span>
               )}
               <span className="text-xs text-surface-400 ml-auto">{senderName} &mdash; {formatTimestamp(latest.created_at)}</span>
             </div>

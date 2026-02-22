@@ -216,13 +216,59 @@ export async function sendMessage(dealId: string, content: string, messageType: 
   });
   if (error) throw new Error(error.message);
 
+  // Auto-resolve unresolved "Response Requested" messages where the flagger
+  // has a different role than the replying user
+  const { data: currentUserProfile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (currentUserProfile?.role) {
+    const { data: unresolvedActions } = await supabase
+      .from('deal_messages')
+      .select('id, sender_id')
+      .eq('deal_id', dealId)
+      .eq('message_type', 'action_required')
+      .eq('is_resolved', false);
+
+    if (unresolvedActions && unresolvedActions.length > 0) {
+      // Look up roles for all flaggers
+      const flaggerIds = Array.from(new Set(unresolvedActions.map(m => m.sender_id)));
+      const { data: flaggerProfiles } = await supabase
+        .from('users')
+        .select('id, role')
+        .in('id', flaggerIds);
+
+      const flaggerRoleMap = Object.fromEntries(
+        (flaggerProfiles || []).map(u => [u.id, u.role])
+      );
+
+      // Resolve messages where flagger has a different role
+      const toResolve = unresolvedActions.filter(
+        m => flaggerRoleMap[m.sender_id] && flaggerRoleMap[m.sender_id] !== currentUserProfile.role
+      );
+
+      if (toResolve.length > 0) {
+        await supabase
+          .from('deal_messages')
+          .update({
+            is_resolved: true,
+            resolved_by: user.id,
+            resolved_at: new Date().toISOString(),
+          })
+          .in('id', toResolve.map(m => m.id));
+      }
+    }
+  }
+
   const { data: deal } = await supabase.from('deals').select('deal_number').eq('id', dealId).single();
 
   await logAuditEvent({
     dealId,
     userId: user.id,
     actionType: 'message_sent',
-    description: `${messageType === 'action_required' ? 'Action required' : 'Note'} added`,
+    description: `${messageType === 'action_required' ? 'Response requested' : 'Comment'} added`,
     metadata: { message_type: messageType },
   });
 
@@ -231,7 +277,7 @@ export async function sendMessage(dealId: string, content: string, messageType: 
     dealId,
     excludeUserId: user.id,
     type: notifType,
-    title: `Deal ${deal?.deal_number || ''}: ${messageType === 'action_required' ? 'Action Required' : 'New Note'}`,
+    title: `Deal ${deal?.deal_number || ''}: ${messageType === 'action_required' ? 'Response Requested' : 'New Comment'}`,
     message: content.length > 100 ? content.slice(0, 100) + '...' : content,
   });
 
@@ -264,7 +310,7 @@ export async function resolveMessage(messageId: string, dealId?: string) {
       dealId: resolvedDealId,
       userId: user.id,
       actionType: 'action_required_resolved',
-      description: 'Action required item resolved',
+      description: 'Response request resolved',
       metadata: { message_id: messageId },
     });
   }

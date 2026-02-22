@@ -80,9 +80,9 @@ const TEMPLATES: Record<
       `Deal ${m.dealNumber || ''} has been kicked back. ${m.reason || 'Please review and resubmit.'}`,
   },
   action_required: {
-    subject: 'Action Required on Deal: {dealNumber}',
+    subject: 'Response Requested on Deal: {dealNumber}',
     body: (m) =>
-      `An action item has been added to deal ${m.dealNumber || ''}. ${m.message || ''}`,
+      `A response has been requested on deal ${m.dealNumber || ''}. ${m.message || ''}`,
   },
   deal_completed: {
     subject: 'Deal Completed: {dealNumber}',
