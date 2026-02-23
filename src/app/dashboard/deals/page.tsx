@@ -2,7 +2,12 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { DealsList } from '@/components/deals/deals-list';
 
-export default async function DealsPage() {
+export default async function DealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect('/auth/login');
@@ -35,5 +40,13 @@ export default async function DealsPage() {
     dealViewsMap[v.deal_id] = v.last_viewed_at;
   });
 
-  return <DealsList deals={deals} user={userProfile} dealViews={dealViewsMap} />;
+  return (
+    <DealsList
+      deals={deals}
+      user={userProfile}
+      dealViews={dealViewsMap}
+      initialStatusFilter={params.filter || params.status || ''}
+      initialDeliveredMonth={params.deliveredMonth || ''}
+    />
+  );
 }

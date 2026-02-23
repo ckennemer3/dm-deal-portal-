@@ -31,6 +31,22 @@ export const DEAL_STATUS_CONFIG: Record<DealStatus, { label: string; color: stri
   cancelled: { label: 'Cancelled', color: 'text-surface-600', bgColor: 'bg-surface-200' },
 };
 
+// === Status Group Constants ===
+/** Statuses that represent a completed/closed deal */
+export const TERMINAL_STATUSES: DealStatus[] = ['signed_and_delivered', 'cancelled'];
+
+/** Statuses representing active (non-terminal) deals */
+export const ACTIVE_DEAL_STATUSES: DealStatus[] = [
+  'pending', 'pending_manager_review', 'submitted_to_underwriting',
+  'kicked_back_to_manager', 'kicked_back_to_sales', 'submitted_to_lender', 'approved',
+];
+
+/** Statuses where a deal is awaiting someone's action */
+export const AWAITING_ACTION_STATUSES: DealStatus[] = [
+  'pending_manager_review', 'submitted_to_underwriting',
+  'kicked_back_to_manager', 'kicked_back_to_sales', 'submitted_to_lender',
+];
+
 // === Vehicle Condition Labels ===
 export const VEHICLE_CONDITION_LABELS: Record<VehicleCondition, string> = {
   new: 'New',

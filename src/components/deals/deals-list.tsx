@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserWithRelations, DealStatus, DealType } from '@/lib/types';
-import { DEAL_STATUS_CONFIG, DEAL_TYPE_LABELS } from '@/lib/constants';
+import { DEAL_STATUS_CONFIG, DEAL_TYPE_LABELS, ACTIVE_DEAL_STATUSES, AWAITING_ACTION_STATUSES } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { StatusBadge } from '@/components/ui/badge';
@@ -17,16 +17,52 @@ interface DealsListProps {
   deals: any[];
   user: UserWithRelations;
   dealViews?: Record<string, string>;
+  initialStatusFilter?: string;
+  initialDeliveredMonth?: string;
 }
 
-export function DealsList({ deals, user, dealViews = {} }: DealsListProps) {
+/** Resolve named filter shortcuts to comma-separated status strings */
+function resolveStatusFilter(filter: string): string {
+  if (filter === 'active') return ACTIVE_DEAL_STATUSES.join(',');
+  if (filter === 'awaiting') return AWAITING_ACTION_STATUSES.join(',');
+  return filter;
+}
+
+/** Get a human-readable label for the active filter pill */
+function getFilterLabel(statusFilter: string, deliveredMonth: string, originalFilter: string): string {
+  if (deliveredMonth === 'current') return 'Delivered This Month';
+  if (originalFilter === 'active') return 'Active Deals';
+  if (originalFilter === 'awaiting') return 'Awaiting Action';
+  const count = statusFilter.split(',').length;
+  return `${count} statuses selected`;
+}
+
+export function DealsList({
+  deals,
+  user,
+  dealViews = {},
+  initialStatusFilter = '',
+  initialDeliveredMonth = '',
+}: DealsListProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(resolveStatusFilter(initialStatusFilter));
   const [typeFilter, setTypeFilter] = useState('');
+  const [deliveredMonthFilter, setDeliveredMonthFilter] = useState(initialDeliveredMonth);
+  // Track the original named filter for labeling
+  const [originalFilter] = useState(initialStatusFilter);
 
   const statusOptions = Object.entries(DEAL_STATUS_CONFIG).map(([value, { label }]) => ({ value, label }));
   const typeOptions = Object.entries(DEAL_TYPE_LABELS).map(([value, label]) => ({ value, label }));
+
+  const isMultiStatusFilter = statusFilter.includes(',');
+  const hasSpecialFilter = isMultiStatusFilter || deliveredMonthFilter;
+
+  const clearFilters = () => {
+    setStatusFilter('');
+    setDeliveredMonthFilter('');
+    router.push('/dashboard/deals');
+  };
 
   const filtered = deals.filter((deal: any) => {
     const app = deal.applicants?.find((a: any) => a.applicant_number === 1);
@@ -35,9 +71,23 @@ export function DealsList({ deals, user, dealViews = {} }: DealsListProps) {
       deal.deal_number.toLowerCase().includes(search.toLowerCase()) ||
       clientName.toLowerCase().includes(search.toLowerCase()) ||
       `${deal.vehicle_year} ${deal.vehicle_make} ${deal.vehicle_model}`.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = !statusFilter || deal.status === statusFilter;
+
+    let matchesStatus = true;
+    if (statusFilter) {
+      const statuses = statusFilter.split(',');
+      matchesStatus = statuses.includes(deal.status);
+    }
+
     const matchesType = !typeFilter || deal.deal_type === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+
+    let matchesDeliveredMonth = true;
+    if (deliveredMonthFilter === 'current') {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      matchesDeliveredMonth = new Date(deal.updated_at) >= startOfMonth;
+    }
+
+    return matchesSearch && matchesStatus && matchesType && matchesDeliveredMonth;
   });
 
   return (
@@ -45,7 +95,11 @@ export function DealsList({ deals, user, dealViews = {} }: DealsListProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900 tracking-tight">Deals</h1>
-          <p className="text-surface-500 mt-1 text-sm">{deals.length} total deals</p>
+          <p className="text-surface-500 mt-1 text-sm">
+            {filtered.length === deals.length
+              ? `${deals.length} total deals`
+              : `Showing ${filtered.length} of ${deals.length} deals`}
+          </p>
         </div>
         {canSubmitDeals(user.role) && (
           <Link href="/dashboard/deals/new">
@@ -56,8 +110,29 @@ export function DealsList({ deals, user, dealViews = {} }: DealsListProps) {
 
       <div className="flex items-center gap-4 flex-wrap">
         <Input placeholder="Search deals..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-        <Select options={[{ value: '', label: 'All Statuses' }, ...statusOptions]} value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)} className="max-w-[220px]" />
+
+        {hasSpecialFilter ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-50 text-brand-700 text-sm font-medium border border-brand-200">
+            {getFilterLabel(statusFilter, deliveredMonthFilter, originalFilter)}
+            <button
+              onClick={clearFilters}
+              className="ml-1 hover:text-brand-900 transition-colors"
+              aria-label="Clear filter"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </span>
+        ) : (
+          <Select
+            options={[{ value: '', label: 'All Statuses' }, ...statusOptions]}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="max-w-[220px]"
+          />
+        )}
+
         <Select options={[{ value: '', label: 'All Types' }, ...typeOptions]} value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)} className="max-w-[200px]" />
       </div>

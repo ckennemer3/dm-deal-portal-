@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { UserRole, DealStatus } from '@/lib/types';
-import { ROLE_LABELS } from '@/lib/constants';
+import { UserRole } from '@/lib/types';
+import { ROLE_LABELS, TERMINAL_STATUSES, ACTIVE_DEAL_STATUSES, AWAITING_ACTION_STATUSES } from '@/lib/constants';
 import { formatDuration } from '@/lib/utils';
 import { SubmittedDealsQueue } from '@/components/dashboard/submitted-deals-queue';
 import { UnderwriterDashboard } from '@/components/dashboard/underwriter-dashboard';
@@ -120,17 +120,7 @@ function getQuickActions(role: UserRole): QuickAction[] {
   }
 }
 
-// --- Statuses considered "terminal" ---
-const TERMINAL_STATUSES: DealStatus[] = ['signed_and_delivered', 'cancelled'];
-
-// --- Statuses considered "awaiting action" ---
-const AWAITING_ACTION_STATUSES: DealStatus[] = [
-  'pending_manager_review',
-  'submitted_to_underwriting',
-  'kicked_back_to_manager',
-  'kicked_back_to_sales',
-  'submitted_to_lender',
-];
+// Terminal and awaiting-action statuses imported from @/lib/constants
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -351,7 +341,7 @@ export default async function DashboardPage() {
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Active Deals */}
-        <div className="card p-6">
+        <Link href="/dashboard/deals?filter=active" className="card p-6 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-surface-500">Active Deals</p>
@@ -363,11 +353,16 @@ export default async function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-xs text-surface-400 mt-3">Excludes delivered and cancelled</p>
-        </div>
+          <p className="text-xs text-surface-400 mt-3 group-hover:text-brand-500 transition-colors flex items-center gap-1">
+            Excludes delivered and cancelled
+            <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </p>
+        </Link>
 
         {/* Awaiting Action */}
-        <div className="card p-6">
+        <Link href="/dashboard/deals?filter=awaiting" className="card p-6 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-surface-500">Awaiting Action</p>
@@ -379,11 +374,16 @@ export default async function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-xs text-surface-400 mt-3">Pending review or kicked back</p>
-        </div>
+          <p className="text-xs text-surface-400 mt-3 group-hover:text-brand-500 transition-colors flex items-center gap-1">
+            Pending review or kicked back
+            <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </p>
+        </Link>
 
         {/* Avg Time in Current Status */}
-        <div className="card p-6">
+        <Link href="/dashboard/deals?filter=active" className="card p-6 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-surface-500">Avg. Time in Status</p>
@@ -397,11 +397,16 @@ export default async function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-xs text-surface-400 mt-3">Across all active deals</p>
-        </div>
+          <p className="text-xs text-surface-400 mt-3 group-hover:text-brand-500 transition-colors flex items-center gap-1">
+            Across all active deals
+            <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </p>
+        </Link>
 
         {/* Completed This Month */}
-        <div className="card p-6">
+        <Link href="/dashboard/deals?status=signed_and_delivered&deliveredMonth=current" className="card p-6 hover:shadow-card-hover hover:border-brand-200 transition-all cursor-pointer group">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-surface-500">Delivered This Month</p>
@@ -413,10 +418,13 @@ export default async function DashboardPage() {
               </svg>
             </div>
           </div>
-          <p className="text-xs text-surface-400 mt-3">
+          <p className="text-xs text-surface-400 mt-3 group-hover:text-brand-500 transition-colors flex items-center gap-1">
             {new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+            <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
           </p>
-        </div>
+        </Link>
       </div>
 
       {/* Quick Actions */}
