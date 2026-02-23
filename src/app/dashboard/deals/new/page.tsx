@@ -7,11 +7,26 @@ export default async function NewDealPage() {
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect('/auth/login');
 
-  const { data: userProfile } = await supabase
+  // Try full query with office FK join first
+  let { data: userProfile, error: profileError } = await supabase
     .from('users')
-    .select('*')
+    .select(`
+      *,
+      team:teams!users_team_id_fkey(*, office:offices(*)),
+      office:offices!users_primary_office_id_fkey(*)
+    `)
     .eq('id', authUser.id)
     .single();
+
+  // Fallback: if query fails (e.g. corrupted primary_office_id), retry without office FK join
+  if (profileError && !userProfile) {
+    console.warn('New deal page profile query failed, retrying without office join:', profileError.message);
+    ({ data: userProfile } = await supabase
+      .from('users')
+      .select('*, team:teams!users_team_id_fkey(*, office:offices(*))')
+      .eq('id', authUser.id)
+      .single());
+  }
 
   if (!userProfile || (userProfile.role !== 'agent' && userProfile.role !== 'administrator')) {
     redirect('/dashboard');
