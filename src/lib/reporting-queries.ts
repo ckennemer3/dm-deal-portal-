@@ -64,16 +64,27 @@ export function resolveFiltersFromSearchParams(
   params: Record<string, string | undefined>
 ): ReportingFilters {
   const filters: ReportingFilters = {};
-  if (params.office) filters.office = params.office;
-  if (params.team) filters.team = params.team;
-  if (params.manager) filters.manager = params.manager;
-  if (params.underwriter) filters.underwriter = params.underwriter;
-  if (params.agent) filters.agent = params.agent;
+
+  // Direct string param-to-filter mappings
+  const directMappings: Array<[string, keyof ReportingFilters]> = [
+    ['office', 'office'],
+    ['team', 'team'],
+    ['manager', 'manager'],
+    ['underwriter', 'underwriter'],
+    ['agent', 'agent'],
+    ['tab', 'tab'],
+    ['creditScoreRange', 'creditScoreRange'],
+    ['ltvRange', 'ltvRange'],
+    ['datePreset', 'datePreset'],
+  ];
+
+  for (const [paramKey, filterKey] of directMappings) {
+    if (params[paramKey]) {
+      (filters as Record<string, string>)[filterKey] = params[paramKey]!;
+    }
+  }
+
   if (params.dealType) filters.dealType = params.dealType as DealType;
-  if (params.creditScoreRange) filters.creditScoreRange = params.creditScoreRange;
-  if (params.ltvRange) filters.ltvRange = params.ltvRange;
-  if (params.datePreset) filters.datePreset = params.datePreset;
-  if (params.tab) filters.tab = params.tab;
 
   // Resolve date preset into from/to
   if (filters.datePreset && filters.datePreset !== 'custom') {

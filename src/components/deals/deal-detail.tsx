@@ -321,90 +321,10 @@ function SectionEditButton({ editing, onClick }: Readonly<{ editing: boolean; on
 type KickbackBannerMode = 'recipient_needs_response' | 'kicker_first_view_response' | false;
 
 /**
- * Determines which kickback banner (if any) should be shown to the current user.
- * Extracted from the component to reduce cognitive complexity.
+ * Encapsulates deal status action handlers to reduce cognitive complexity of DealDetail.
  */
-function determineKickbackBannerMode(
-  deal: any,
-  userId: string,
-  latestKickback: any | null,
-  userLastViewedAt?: string | null,
-): KickbackBannerMode {
-  if (!latestKickback) return false;
-
-  const isKickedBackStatus = deal.status === 'kicked_back_to_manager' || deal.status === 'kicked_back_to_sales';
-  const isRecipient = latestKickback.kicked_to_user_id === userId;
-  const isKicker = latestKickback.kicked_by_user_id === userId;
-
-  if (isKickedBackStatus && isRecipient && !latestKickback.is_resolved) {
-    return 'recipient_needs_response';
-  }
-
-  if (isKicker && latestKickback.is_resolved && latestKickback.responded_at) {
-    const respondedAt = new Date(latestKickback.responded_at).getTime();
-    const lastViewed = userLastViewedAt ? new Date(userLastViewedAt).getTime() : 0;
-    if (respondedAt > lastViewed) {
-      return 'kicker_first_view_response';
-    }
-  }
-
-  return false;
-}
-
-export function DealDetail({ deal, user, underwriters, auditEntries = [], kickbackReasons = [], userLastViewedAt }: Readonly<DealDetailProps>) {
-  const router = useRouter();
-  const [showKickbackModal, setShowKickbackModal] = useState(false);
-  const [kickbackMessage, setKickbackMessage] = useState('');
-  const [kickbackReason, setKickbackReason] = useState<KickbackReason | ''>('');
-  const [showReassignModal, setShowReassignModal] = useState(false);
-  const [reassignTo, setReassignTo] = useState('');
+function useDealActions(deal: any, router: ReturnType<typeof useRouter>) {
   const [loading, setLoading] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
-  const [uploadDocType, setUploadDocType] = useState<string>('other');
-  const [customDocLabel, setCustomDocLabel] = useState('');
-  const [uploadError, setUploadError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Section-level editing state
-  const [editingVehicle, setEditingVehicle] = useState(false);
-  const [editingStrengths, setEditingStrengths] = useState(false);
-
-  // Kickback banner state
-  const [kickbackResponseText, setKickbackResponseText] = useState('');
-  const [submittingKickbackResponse, setSubmittingKickbackResponse] = useState(false);
-
-  const primaryApplicant = deal.applicants?.find((a: any) => a.applicant_number === 1);
-  const clientName = primaryApplicant ? getFullName(primaryApplicant.first_name, primaryApplicant.last_name) : 'Unknown';
-  const vehicleSummary = `${deal.vehicle_year} ${deal.vehicle_make} ${deal.vehicle_model} ${deal.vehicle_trim}`;
-
-  const isActiveDeal = deal.status !== 'signed_and_delivered' && deal.status !== 'cancelled';
-  const canEdit = canEditDealFields(user, deal);
-
-  // Use the most recent status history entry timestamp, or fall back to updated_at / created_at
-  const lastStatusChange = deal.status_history?.length
-    ? deal.status_history.sort((a: any, b: any) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())[0].changed_at
-    : deal.updated_at || deal.created_at;
-
-  const refreshPage = useCallback(() => router.refresh(), [router]);
-
-  // ---- Kickback Banner Logic ----
-  // Only show banner for the most recent unresolved kickback
-  const latestKickback = kickbackReasons.length > 0 ? kickbackReasons[0] : null;
-
-  const kickbackBannerMode: KickbackBannerMode = determineKickbackBannerMode(deal, user.id, latestKickback, userLastViewedAt);
-
-  const handleKickbackResponse = async () => {
-    if (!latestKickback || !kickbackResponseText.trim()) return;
-    setSubmittingKickbackResponse(true);
-    try {
-      await respondToKickback(latestKickback.id, kickbackResponseText);
-      setKickbackResponseText('');
-      router.refresh();
-    } finally {
-      setSubmittingKickbackResponse(false);
-    }
-  };
-
 
   const handleApproveForward = async () => {
     setLoading(true);
@@ -414,43 +334,10 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
     } finally { setLoading(false); }
   };
 
-  const handleKickback = async () => {
-    if (!kickbackReason) return;
-    if (!kickbackMessage.trim()) return;
-    setLoading(true);
-    try {
-      // UW kicks back to manager; Manager kicks back to sales agent
-      const targetStatus = (user.role === 'underwriter')
-        ? 'kicked_back_to_manager' as const
-        : 'kicked_back_to_sales' as const;
-      const reasonLabel = KICKBACK_REASON_LABELS[kickbackReason as KickbackReason];
-      const notes = `${reasonLabel}: ${kickbackMessage}`;
-      await updateDealStatus(deal.id, targetStatus, notes, {
-        kickbackReason: kickbackReason as KickbackReason,
-        kickbackExplanation: kickbackMessage,
-      });
-      await sendMessage(deal.id, notes, 'action_required');
-      setShowKickbackModal(false);
-      setKickbackMessage('');
-      setKickbackReason('');
-      router.refresh();
-    } finally { setLoading(false); }
-  };
-
   const handleClaim = async () => {
     setLoading(true);
     try {
       await claimDeal(deal.id);
-      router.refresh();
-    } finally { setLoading(false); }
-  };
-
-  const handleReassign = async () => {
-    if (!reassignTo) return;
-    setLoading(true);
-    try {
-      await reassignDeal(deal.id, reassignTo);
-      setShowReassignModal(false);
       router.refresh();
     } finally { setLoading(false); }
   };
@@ -487,6 +374,18 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
     } finally { setLoading(false); }
   };
 
+  return { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleResubmit, handleSubmitToLender, handleMarkApproved };
+}
+
+/**
+ * Encapsulates document action handlers to reduce cognitive complexity of DealDetail.
+ */
+function useDealDocuments(dealId: string, router: ReturnType<typeof useRouter>) {
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadDocType, setUploadDocType] = useState<string>('other');
+  const [customDocLabel, setCustomDocLabel] = useState('');
+  const [uploadError, setUploadError] = useState('');
+
   const handleDocumentUpload = async (file: File) => {
     setUploadingDoc(true);
     setUploadError('');
@@ -496,7 +395,7 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
       if (uploadDocType === 'other' && customDocLabel.trim()) {
         fd.append('customLabel', customDocLabel.trim());
       }
-      const result = await uploadDocument(deal.id, uploadDocType, null, fd);
+      const result = await uploadDocument(dealId, uploadDocType, null, fd);
       if (!result.success) {
         setUploadError(result.error);
         return;
@@ -535,6 +434,126 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
     } catch {
       // Silently fail
     }
+  };
+
+  return { uploadingDoc, uploadDocType, setUploadDocType, customDocLabel, setCustomDocLabel, uploadError, handleDocumentUpload, handleDocumentView, handleDocumentDownload, handleDocumentDelete };
+}
+
+/**
+ * Determines which kickback banner (if any) should be shown to the current user.
+ * Extracted from the component to reduce cognitive complexity.
+ */
+function determineKickbackBannerMode(
+  deal: any,
+  userId: string,
+  latestKickback: any | null,
+  userLastViewedAt?: string | null,
+): KickbackBannerMode {
+  if (!latestKickback) return false;
+
+  const isKickedBackStatus = deal.status === 'kicked_back_to_manager' || deal.status === 'kicked_back_to_sales';
+  const isRecipient = latestKickback.kicked_to_user_id === userId;
+  const isKicker = latestKickback.kicked_by_user_id === userId;
+
+  if (isKickedBackStatus && isRecipient && !latestKickback.is_resolved) {
+    return 'recipient_needs_response';
+  }
+
+  if (isKicker && latestKickback.is_resolved && latestKickback.responded_at) {
+    const respondedAt = new Date(latestKickback.responded_at).getTime();
+    const lastViewed = userLastViewedAt ? new Date(userLastViewedAt).getTime() : 0;
+    if (respondedAt > lastViewed) {
+      return 'kicker_first_view_response';
+    }
+  }
+
+  return false;
+}
+
+export function DealDetail({ deal, user, underwriters, auditEntries = [], kickbackReasons = [], userLastViewedAt }: Readonly<DealDetailProps>) {
+  const router = useRouter();
+  const [showKickbackModal, setShowKickbackModal] = useState(false);
+  const [kickbackMessage, setKickbackMessage] = useState('');
+  const [kickbackReason, setKickbackReason] = useState<KickbackReason | ''>('');
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [reassignTo, setReassignTo] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Section-level editing state
+  const [editingVehicle, setEditingVehicle] = useState(false);
+  const [editingStrengths, setEditingStrengths] = useState(false);
+
+  // Kickback banner state
+  const [kickbackResponseText, setKickbackResponseText] = useState('');
+  const [submittingKickbackResponse, setSubmittingKickbackResponse] = useState(false);
+
+  // Extracted action and document handlers
+  const { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleResubmit, handleSubmitToLender, handleMarkApproved } = useDealActions(deal, router);
+  const { uploadingDoc, uploadDocType, setUploadDocType, customDocLabel, setCustomDocLabel, uploadError, handleDocumentUpload, handleDocumentView, handleDocumentDownload, handleDocumentDelete } = useDealDocuments(deal.id, router);
+
+  const primaryApplicant = deal.applicants?.find((a: any) => a.applicant_number === 1);
+  const clientName = primaryApplicant ? getFullName(primaryApplicant.first_name, primaryApplicant.last_name) : 'Unknown';
+  const vehicleSummary = `${deal.vehicle_year} ${deal.vehicle_make} ${deal.vehicle_model} ${deal.vehicle_trim}`;
+
+  const isActiveDeal = deal.status !== 'signed_and_delivered' && deal.status !== 'cancelled';
+  const canEdit = canEditDealFields(user, deal);
+
+  // Use the most recent status history entry timestamp, or fall back to updated_at / created_at
+  const lastStatusChange = deal.status_history?.length
+    ? deal.status_history.sort((a: any, b: any) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime())[0].changed_at
+    : deal.updated_at || deal.created_at;
+
+  const refreshPage = useCallback(() => router.refresh(), [router]);
+
+  // ---- Kickback Banner Logic ----
+  // Only show banner for the most recent unresolved kickback
+  const latestKickback = kickbackReasons.length > 0 ? kickbackReasons[0] : null;
+
+  const kickbackBannerMode: KickbackBannerMode = determineKickbackBannerMode(deal, user.id, latestKickback, userLastViewedAt);
+
+  const handleKickbackResponse = async () => {
+    if (!latestKickback || !kickbackResponseText.trim()) return;
+    setSubmittingKickbackResponse(true);
+    try {
+      await respondToKickback(latestKickback.id, kickbackResponseText);
+      setKickbackResponseText('');
+      router.refresh();
+    } finally {
+      setSubmittingKickbackResponse(false);
+    }
+  };
+
+  const handleKickback = async () => {
+    if (!kickbackReason) return;
+    if (!kickbackMessage.trim()) return;
+    setLoading(true);
+    try {
+      // UW kicks back to manager; Manager kicks back to sales agent
+      const targetStatus = (user.role === 'underwriter')
+        ? 'kicked_back_to_manager' as const
+        : 'kicked_back_to_sales' as const;
+      const reasonLabel = KICKBACK_REASON_LABELS[kickbackReason as KickbackReason];
+      const notes = `${reasonLabel}: ${kickbackMessage}`;
+      await updateDealStatus(deal.id, targetStatus, notes, {
+        kickbackReason: kickbackReason as KickbackReason,
+        kickbackExplanation: kickbackMessage,
+      });
+      await sendMessage(deal.id, notes, 'action_required');
+      setShowKickbackModal(false);
+      setKickbackMessage('');
+      setKickbackReason('');
+      router.refresh();
+    } finally { setLoading(false); }
+  };
+
+  const handleReassign = async () => {
+    if (!reassignTo) return;
+    setLoading(true);
+    try {
+      await reassignDeal(deal.id, reassignTo);
+      setShowReassignModal(false);
+      router.refresh();
+    } finally { setLoading(false); }
   };
 
   return (
