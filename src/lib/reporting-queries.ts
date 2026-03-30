@@ -1,5 +1,5 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import { DealType, DealStatus, UserRole, User } from './types';
+import { DealType, DealStatus, UserRole } from './types';
 import { CREDIT_SCORE_RANGES, LTV_RANGES, KICKBACK_REASON_CATEGORY_LABELS } from './constants';
 import { calculateLTV, getFullName } from './utils';
 

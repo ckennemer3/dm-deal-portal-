@@ -39,6 +39,11 @@ export function MyMetricsTab({ data, userRole }: Readonly<MyMetricsTabProps>) {
     }))
     .sort((a, b) => b.count - a.count);
 
+  const nonAgentTotalLabel = userRole === 'underwriter' ? 'Total Processed' : 'Total Reviewed';
+  const totalLabel = userRole === 'agent' ? 'Total Submitted' : nonAgentTotalLabel;
+  const nonAgentResponseLabel = userRole === 'underwriter' ? 'Avg Processing' : 'Avg Review Time';
+  const responseLabel = userRole === 'agent' ? 'Avg KB Response' : nonAgentResponseLabel;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -60,14 +65,14 @@ export function MyMetricsTab({ data, userRole }: Readonly<MyMetricsTabProps>) {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPICard
-          label={userRole === 'agent' ? 'Total Submitted' : (userRole === 'underwriter' ? 'Total Processed' : 'Total Reviewed')}
+          label={totalLabel}
           value={metrics.totalDeals}
         />
         {(userRole === 'agent' || userRole === 'manager' || userRole === 'general_manager') && (
           <KPICard label="Kickback Rate" value={`${metrics.kickbackRate}%`} />
         )}
         <KPICard
-          label={userRole === 'agent' ? 'Avg KB Response' : (userRole === 'underwriter' ? 'Avg Processing' : 'Avg Review Time')}
+          label={responseLabel}
           value={metrics.avgResponseHours > 0 ? `${metrics.avgResponseHours}h` : '\u2014'}
         />
         {userRole === 'agent' && metrics.totalDeals > 0 && (

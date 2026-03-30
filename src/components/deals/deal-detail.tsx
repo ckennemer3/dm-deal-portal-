@@ -440,6 +440,44 @@ function useDealDocuments(dealId: string, router: ReturnType<typeof useRouter>) 
 }
 
 /**
+ * Encapsulates kickback modal state and handler to reduce cognitive complexity of DealDetail.
+ */
+function useKickbackModal(
+  deal: any,
+  userRole: string,
+  setLoading: (v: boolean) => void,
+  router: ReturnType<typeof useRouter>
+) {
+  const [showKickbackModal, setShowKickbackModal] = useState(false);
+  const [kickbackMessage, setKickbackMessage] = useState('');
+  const [kickbackReason, setKickbackReason] = useState<KickbackReason | ''>('');
+
+  const handleKickback = async () => {
+    if (!kickbackReason) return;
+    if (!kickbackMessage.trim()) return;
+    setLoading(true);
+    try {
+      const targetStatus = userRole === 'underwriter'
+        ? 'kicked_back_to_manager' as const
+        : 'kicked_back_to_sales' as const;
+      const reasonLabel = KICKBACK_REASON_LABELS[kickbackReason as KickbackReason];
+      const notes = `${reasonLabel}: ${kickbackMessage}`;
+      await updateDealStatus(deal.id, targetStatus, notes, {
+        kickbackReason: kickbackReason as KickbackReason,
+        kickbackExplanation: kickbackMessage,
+      });
+      await sendMessage(deal.id, notes, 'action_required');
+      setShowKickbackModal(false);
+      setKickbackMessage('');
+      setKickbackReason('');
+      router.refresh();
+    } finally { setLoading(false); }
+  };
+
+  return { showKickbackModal, setShowKickbackModal, kickbackMessage, setKickbackMessage, kickbackReason, setKickbackReason, handleKickback };
+}
+
+/**
  * Determines which kickback banner (if any) should be shown to the current user.
  * Extracted from the component to reduce cognitive complexity.
  */
@@ -472,9 +510,6 @@ function determineKickbackBannerMode(
 
 export function DealDetail({ deal, user, underwriters, auditEntries = [], kickbackReasons = [], userLastViewedAt }: Readonly<DealDetailProps>) {
   const router = useRouter();
-  const [showKickbackModal, setShowKickbackModal] = useState(false);
-  const [kickbackMessage, setKickbackMessage] = useState('');
-  const [kickbackReason, setKickbackReason] = useState<KickbackReason | ''>('');
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [reassignTo, setReassignTo] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -490,6 +525,7 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
   // Extracted action and document handlers
   const { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleResubmit, handleSubmitToLender, handleMarkApproved } = useDealActions(deal, router);
   const { uploadingDoc, uploadDocType, setUploadDocType, customDocLabel, setCustomDocLabel, uploadError, handleDocumentUpload, handleDocumentView, handleDocumentDownload, handleDocumentDelete } = useDealDocuments(deal.id, router);
+  const { showKickbackModal, setShowKickbackModal, kickbackMessage, setKickbackMessage, kickbackReason, setKickbackReason, handleKickback } = useKickbackModal(deal, user.role, setLoading, router);
 
   const primaryApplicant = deal.applicants?.find((a: any) => a.applicant_number === 1);
   const clientName = primaryApplicant ? getFullName(primaryApplicant.first_name, primaryApplicant.last_name) : 'Unknown';
@@ -521,29 +557,6 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
     } finally {
       setSubmittingKickbackResponse(false);
     }
-  };
-
-  const handleKickback = async () => {
-    if (!kickbackReason) return;
-    if (!kickbackMessage.trim()) return;
-    setLoading(true);
-    try {
-      // UW kicks back to manager; Manager kicks back to sales agent
-      const targetStatus = (user.role === 'underwriter')
-        ? 'kicked_back_to_manager' as const
-        : 'kicked_back_to_sales' as const;
-      const reasonLabel = KICKBACK_REASON_LABELS[kickbackReason as KickbackReason];
-      const notes = `${reasonLabel}: ${kickbackMessage}`;
-      await updateDealStatus(deal.id, targetStatus, notes, {
-        kickbackReason: kickbackReason as KickbackReason,
-        kickbackExplanation: kickbackMessage,
-      });
-      await sendMessage(deal.id, notes, 'action_required');
-      setShowKickbackModal(false);
-      setKickbackMessage('');
-      setKickbackReason('');
-      router.refresh();
-    } finally { setLoading(false); }
   };
 
   const handleReassign = async () => {

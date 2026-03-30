@@ -1,6 +1,6 @@
 'use client';
 
-import { DealFormData, DealType, DocumentType } from '@/lib/types';
+import { DealFormData, DocumentType } from '@/lib/types';
 import { REQUIRED_DOCUMENTS, OPTIONAL_DOCUMENTS, DOCUMENT_TYPE_LABELS } from '@/lib/constants';
 import { FileUpload } from '@/components/ui/file-upload';
 import { Card } from '@/components/ui/card';

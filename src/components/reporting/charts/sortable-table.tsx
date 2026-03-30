@@ -145,13 +145,16 @@ export function SortableTable<T extends Record<string, any>>({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-50">
-              {columns.map(col => (
+              {columns.map(col => {
+                const nonRightAlign = col.align === 'center' ? 'text-center' : 'text-left';
+                const headerAlign = col.align === 'right' ? 'text-right' : nonRightAlign;
+                return (
                 <th
                   key={col.key}
                   onClick={() => handleSort(col.key)}
                   className={cn(
                     'px-3 py-2 text-xs font-semibold uppercase tracking-wider text-surface-500 cursor-pointer hover:text-surface-700 select-none whitespace-nowrap',
-                    col.align === 'right' ? 'text-right' : (col.align === 'center' ? 'text-center' : 'text-left')
+                    headerAlign
                   )}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -161,7 +164,8 @@ export function SortableTable<T extends Record<string, any>>({
                     )}
                   </span>
                 </th>
-              ))}
+                );
+              })}
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100">
@@ -175,7 +179,8 @@ export function SortableTable<T extends Record<string, any>>({
                     const q = classifyQuartile(Number(val) || 0, quartileValues[col.key], !!col.lowerIsBetter);
                     cellClass = QUARTILE_COLORS[q];
                   }
-                  const alignClass = col.align === 'right' ? 'text-right' : (col.align === 'center' ? 'text-center' : 'text-left');
+                  const nonRightCellAlign = col.align === 'center' ? 'text-center' : 'text-left';
+                  const alignClass = col.align === 'right' ? 'text-right' : nonRightCellAlign;
                   return (
                     <td
                       key={col.key}

@@ -112,7 +112,7 @@ function renderTemplate(
 ): string {
   return Object.entries(vars).reduce(
     (result, [key, value]) =>
-      result.replace(new RegExp(`\\{${key}\\}`, 'g'), value),
+      result.replaceAll(new RegExp(String.raw`\{${key}\}`, 'g'), value),
     template
   );
 }

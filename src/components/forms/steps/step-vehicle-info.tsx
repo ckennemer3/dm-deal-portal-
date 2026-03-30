@@ -37,7 +37,8 @@ export function StepVehicleInfo({ formData, updateFormData, errors }: Readonly<S
           name="vehicle_condition"
           required
           options={conditionOptions.map(c => {
-            const conditionLabel = c === 'new' ? 'New' : c === 'used' ? 'Used' : 'Untitled Demo';
+            const usedLabel = c === 'used' ? 'Used' : 'Untitled Demo';
+            const conditionLabel = c === 'new' ? 'New' : usedLabel;
             return { value: c, label: conditionLabel };
           })}
           value={formData.vehicle_condition}

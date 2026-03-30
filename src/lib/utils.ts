@@ -19,7 +19,7 @@ export function formatCurrency(value: number | null | undefined): string {
 }
 
 export function parseCurrencyInput(value: string): number | null {
-  const cleaned = value.replace(/[^0-9.]/g, '');
+  const cleaned = value.replaceAll(/[^0-9.]/g, '');
   const parsed = Number.parseFloat(cleaned);
   return Number.isNaN(parsed) ? null : parsed;
 }
@@ -213,7 +213,7 @@ export function isValidEmail(email: string): boolean {
 
 export function toTitleCase(str: string): string {
   if (!str) return '';
-  return str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  return str.toLowerCase().replaceAll(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // === Misc ===

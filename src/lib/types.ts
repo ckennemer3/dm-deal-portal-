@@ -436,6 +436,8 @@ export interface QualityMetric {
 
 // === Timer Config ===
 
+export type TimerUrgency = 'green' | 'yellow' | 'red';
+
 export interface TimerThreshold {
   green_max_hours: number;
   yellow_max_hours: number;

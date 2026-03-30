@@ -174,16 +174,20 @@ export function VolumeTab({ data, effectiveRole }: Readonly<VolumeTabProps>) {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100">
-              {throughput.map(row => (
-                <tr key={row.month}>
-                  <td className="px-3 py-2 font-medium text-surface-700">{row.month}</td>
-                  <td className="px-3 py-2 text-right">{row.submissions}</td>
-                  <td className="px-3 py-2 text-right text-emerald-600">{row.completions}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${row.netChange > 0 ? 'text-red-600' : (row.netChange < 0 ? 'text-emerald-600' : 'text-surface-500')}`}>
-                    {row.netChange > 0 ? '+' : ''}{row.netChange}
-                  </td>
-                </tr>
-              ))}
+              {throughput.map(row => {
+                const netNegativeColor = row.netChange < 0 ? 'text-emerald-600' : 'text-surface-500';
+                const netChangeColor = row.netChange > 0 ? 'text-red-600' : netNegativeColor;
+                return (
+                  <tr key={row.month}>
+                    <td className="px-3 py-2 font-medium text-surface-700">{row.month}</td>
+                    <td className="px-3 py-2 text-right">{row.submissions}</td>
+                    <td className="px-3 py-2 text-right text-emerald-600">{row.completions}</td>
+                    <td className={`px-3 py-2 text-right font-medium ${netChangeColor}`}>
+                      {row.netChange > 0 ? '+' : ''}{row.netChange}
+                    </td>
+                  </tr>
+                );
+              })}
               {throughput.length === 0 && (
                 <tr><td colSpan={4} className="px-3 py-4 text-center text-surface-500">No data available.</td></tr>
               )}

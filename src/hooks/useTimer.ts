@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { formatDuration, getTimerUrgency } from '@/lib/utils';
-import { TimerThreshold } from '@/lib/types';
+import { TimerThreshold, TimerUrgency } from '@/lib/types';
 
 /**
  * useTimer hook — supports both positional and options-object call signatures.
@@ -12,14 +12,14 @@ import { TimerThreshold } from '@/lib/types';
  */
 
 // Overload signatures
-export function useTimer(startTime: string | null, thresholds: TimerThreshold, running?: boolean): { elapsed: number; display: string; urgency: 'green' | 'yellow' | 'red' };
-export function useTimer(options: { startTime: string | null; greenMaxHours?: number; yellowMaxHours?: number; running?: boolean }): { elapsed: number; display: string; urgency: 'green' | 'yellow' | 'red' };
+export function useTimer(startTime: string | null, thresholds: TimerThreshold, running?: boolean): { elapsed: number; display: string; urgency: TimerUrgency };
+export function useTimer(options: { startTime: string | null; greenMaxHours?: number; yellowMaxHours?: number; running?: boolean }): { elapsed: number; display: string; urgency: TimerUrgency };
 
 export function useTimer(
   startTimeOrOptions: string | null | { startTime: string | null; greenMaxHours?: number; yellowMaxHours?: number; running?: boolean },
   thresholds?: TimerThreshold,
   runningArg?: boolean
-): { elapsed: number; display: string; urgency: 'green' | 'yellow' | 'red' } {
+): { elapsed: number; display: string; urgency: TimerUrgency } {
   // Normalise arguments
   let startTime: string | null;
   let greenMaxHours: number;
@@ -35,7 +35,7 @@ export function useTimer(
     running = opts.running ?? true;
   } else {
     // Positional form
-    startTime = startTimeOrOptions as string | null;
+    startTime = typeof startTimeOrOptions === 'string' ? startTimeOrOptions : null;
     greenMaxHours = thresholds?.green_max_hours ?? 4;
     yellowMaxHours = thresholds?.yellow_max_hours ?? 8;
     running = runningArg ?? true;
