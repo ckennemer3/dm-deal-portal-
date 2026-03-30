@@ -13,7 +13,7 @@ export default async function AdminPage() {
     .eq('id', authUser.id)
     .single();
 
-  if (!currentUser || currentUser.role !== 'administrator') {
+  if (currentUser?.role !== 'administrator') {
     redirect('/dashboard');
   }
 

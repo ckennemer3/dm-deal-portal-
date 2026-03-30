@@ -5,7 +5,7 @@ import { DealDetail } from '@/components/deals/deal-detail';
 import { recordDealView } from './actions';
 import type { UserRole } from '@/lib/types';
 
-export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DealDetailPage({ params }: Readonly<{ params: Promise<{ id: string }> }>) {
   const { id: dealId } = await params;
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();

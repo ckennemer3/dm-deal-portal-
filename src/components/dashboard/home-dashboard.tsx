@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { UserWithRelations, DealStatus } from '@/lib/types';
-import { PORTAL_MODULES, DEAL_STATUS_CONFIG, DEAL_TYPE_LABELS } from '@/lib/constants';
-import { Card, CardHeader } from '@/components/ui/card';
+import { UserWithRelations } from '@/lib/types';
+import { PORTAL_MODULES } from '@/lib/constants';
+import { Card } from '@/components/ui/card';
 import { StatusBadge, Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { formatRelativeTime } from '@/lib/utils';
@@ -15,7 +15,7 @@ interface HomeDashboardProps {
   actionMessages: any[];
 }
 
-export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboardProps) {
+export function HomeDashboard({ user, recentDeals, actionMessages }: Readonly<HomeDashboardProps>) {
   return (
     <div className="space-y-8">
       {/* Welcome */}
@@ -35,9 +35,9 @@ export function HomeDashboard({ user, recentDeals, actionMessages }: HomeDashboa
             <Link
               key={module.id}
               href={module.available ? module.href : '#'}
-              className={!module.available ? 'pointer-events-none' : ''}
+              className={module.available ? '' : 'pointer-events-none'}
             >
-              <Card hover={module.available} className={!module.available ? 'opacity-40' : ''}>
+              <Card hover={module.available} className={module.available ? '' : 'opacity-40'}>
                 <div className="flex items-start gap-4">
                   <div className={`w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 ${
                     module.available ? 'bg-brand-100' : 'bg-surface-100'

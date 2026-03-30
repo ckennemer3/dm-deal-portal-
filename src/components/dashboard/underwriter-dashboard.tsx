@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { DealStatus } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DEAL_STATUS_CONFIG } from '@/lib/constants';
 import {
   formatCurrency,
   formatDealAge,
@@ -43,7 +42,7 @@ function formatShortDate(dateStr: string): string {
   });
 }
 
-export function UnderwriterDashboard({ unassignedDeals, myDeals, dealViews }: UnderwriterDashboardProps) {
+export function UnderwriterDashboard({ unassignedDeals, myDeals, dealViews }: Readonly<UnderwriterDashboardProps>) {
   const router = useRouter();
   const [claimingDealId, setClaimingDealId] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -138,7 +137,7 @@ export function UnderwriterDashboard({ unassignedDeals, myDeals, dealViews }: Un
                           {clientName}
                         </td>
                         <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap capitalize">
-                          {deal.deal_type?.replace(/_/g, ' ')}
+                          {deal.deal_type?.replaceAll('_', ' ')}
                         </td>
                         <td className="px-4 py-3 text-sm text-surface-600 whitespace-nowrap">
                           {deal.vehicle_year} {toTitleCase(deal.vehicle_make)} {toTitleCase(deal.vehicle_model)}

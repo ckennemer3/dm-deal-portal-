@@ -42,7 +42,7 @@ interface UserManagementProps {
   teams: any[];
 }
 
-export function UserManagement({ users, offices, teams }: UserManagementProps) {
+export function UserManagement({ users, offices, teams }: Readonly<UserManagementProps>) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithRelations | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

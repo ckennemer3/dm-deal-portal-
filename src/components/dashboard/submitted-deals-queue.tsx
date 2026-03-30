@@ -1,9 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { DealStatus, DealType, UserRole } from '@/lib/types';
+import { DealStatus, UserRole } from '@/lib/types';
 import { StatusBadge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
 import {
   formatCurrency,
   formatDealAge,
@@ -46,7 +45,7 @@ function formatShortDate(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-export function SubmittedDealsQueue({ deals, viewerRole, dealViews = {} }: SubmittedDealsQueueProps) {
+export function SubmittedDealsQueue({ deals, viewerRole, dealViews = {} }: Readonly<SubmittedDealsQueueProps>) {
   // Managers see the underwriter name; underwriters see the manager name
   const showPersonColumn = viewerRole === 'manager' || viewerRole === 'underwriter' || viewerRole === 'executive' || viewerRole === 'administrator';
   const personColumnLabel = viewerRole === 'underwriter' ? 'Manager' : 'Underwriter';

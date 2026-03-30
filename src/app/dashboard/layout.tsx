@@ -4,9 +4,9 @@ import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 
 export default async function DashboardLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
 

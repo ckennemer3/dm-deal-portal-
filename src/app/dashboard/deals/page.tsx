@@ -4,9 +4,9 @@ import { DealsList } from '@/components/deals/deals-list';
 
 export default async function DealsPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<Record<string, string | undefined>>;
-}) {
+}>) {
   const params = await searchParams;
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { UserWithRelations, Office, Team } from '@/lib/types';
+import { UserWithRelations, Office } from '@/lib/types';
 import { UserManagement } from './user-management';
 import { TeamManagement } from './team-management';
 
@@ -14,7 +14,7 @@ interface AdminPanelProps {
 
 type AdminTab = 'users' | 'teams' | 'offices';
 
-export function AdminPanel({ users, offices, teams }: AdminPanelProps) {
+export function AdminPanel({ users, offices, teams }: Readonly<AdminPanelProps>) {
   const [activeTab, setActiveTab] = useState<AdminTab>('users');
 
   const tabs: { id: AdminTab; label: string; count: number }[] = [

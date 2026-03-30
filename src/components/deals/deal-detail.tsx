@@ -3,16 +3,16 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserWithRelations, DealStatus, KickbackReason, AuditActionType, DocumentType } from '@/lib/types';
-import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DEAL_STATUS_CONFIG, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
+import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { StatusBadge, Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/badge';
 import { TimerBadge } from '@/components/ui/timer-badge';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { formatCurrency, formatDealAge, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
-import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canReassignDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments } from '@/lib/permissions';
+import { formatCurrency, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
+import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments } from '@/lib/permissions';
 import { updateDealStatus, claimDeal, reassignDeal, sendMessage, updateDealField, respondToKickback } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
@@ -61,8 +61,8 @@ function formatFieldValue(fieldName: string, value: string | number | null | und
   if (value == null || value === '') return '—';
   const strVal = String(value);
   if (CURRENCY_FIELDS.has(fieldName)) {
-    const num = parseFloat(strVal);
-    return isNaN(num) ? strVal : formatCurrency(num);
+    const num = Number.parseFloat(strVal);
+    return Number.isNaN(num) ? strVal : formatCurrency(num);
   }
   if (fieldName === 'deal_type') {
     return DEAL_TYPE_LABELS[strVal as keyof typeof DEAL_TYPE_LABELS] || strVal;
@@ -71,8 +71,8 @@ function formatFieldValue(fieldName: string, value: string | number | null | und
     return VEHICLE_CONDITION_LABELS[strVal as keyof typeof VEHICLE_CONDITION_LABELS] || strVal;
   }
   if (fieldName === 'vehicle_mileage') {
-    const num = parseInt(strVal, 10);
-    return isNaN(num) ? strVal : num.toLocaleString();
+    const num = Number.parseInt(strVal, 10);
+    return Number.isNaN(num) ? strVal : num.toLocaleString();
   }
   return strVal;
 }
@@ -106,7 +106,7 @@ function getActionColor(actionType: string): string {
 }
 
 /** Merged Deal History section — replaces old Deal History + Audit Log */
-function DealHistory({ entries }: { entries: any[] }) {
+function DealHistory({ entries }: Readonly<{ entries: any[] }>) {
   const [showAll, setShowAll] = useState(false);
   const INITIAL_LIMIT = 20;
   const displayEntries = showAll ? entries : entries.slice(0, INITIAL_LIMIT);
@@ -165,7 +165,7 @@ function EditableField({
   onSaved,
   type = 'text',
   sectionEditing = false,
-}: {
+}: Readonly<{
   fieldName: string;
   label: string;
   value: string | number | null | undefined;
@@ -174,7 +174,7 @@ function EditableField({
   onSaved: () => void;
   type?: 'text' | 'currency' | 'number' | 'textarea';
   sectionEditing?: boolean;
-}) {
+}>) {
   const [localEditing, setLocalEditing] = useState(false);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -182,7 +182,7 @@ function EditableField({
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   const displayValue = formatFieldValue(fieldName, value);
-  const rawValue = value != null ? String(value) : '';
+  const rawValue = value == null ? '' : String(value);
 
   // When section editing turns on, initialize edit value
   const isEditing = localEditing || (sectionEditing && canEdit);
@@ -297,7 +297,7 @@ function EditableField({
 }
 
 // Edit button for card headers — pencil icon toggles section editing
-function SectionEditButton({ editing, onClick }: { editing: boolean; onClick: () => void }) {
+function SectionEditButton({ editing, onClick }: Readonly<{ editing: boolean; onClick: () => void }>) {
   return (
     <button
       onClick={onClick}
@@ -318,7 +318,40 @@ function SectionEditButton({ editing, onClick }: { editing: boolean; onClick: ()
 }
 
 
-export function DealDetail({ deal, user, underwriters, auditEntries = [], kickbackReasons = [], userLastViewedAt }: DealDetailProps) {
+type KickbackBannerMode = 'recipient_needs_response' | 'kicker_first_view_response' | false;
+
+/**
+ * Determines which kickback banner (if any) should be shown to the current user.
+ * Extracted from the component to reduce cognitive complexity.
+ */
+function determineKickbackBannerMode(
+  deal: any,
+  userId: string,
+  latestKickback: any | null,
+  userLastViewedAt?: string | null,
+): KickbackBannerMode {
+  if (!latestKickback) return false;
+
+  const isKickedBackStatus = deal.status === 'kicked_back_to_manager' || deal.status === 'kicked_back_to_sales';
+  const isRecipient = latestKickback.kicked_to_user_id === userId;
+  const isKicker = latestKickback.kicked_by_user_id === userId;
+
+  if (isKickedBackStatus && isRecipient && !latestKickback.is_resolved) {
+    return 'recipient_needs_response';
+  }
+
+  if (isKicker && latestKickback.is_resolved && latestKickback.responded_at) {
+    const respondedAt = new Date(latestKickback.responded_at).getTime();
+    const lastViewed = userLastViewedAt ? new Date(userLastViewedAt).getTime() : 0;
+    if (respondedAt > lastViewed) {
+      return 'kicker_first_view_response';
+    }
+  }
+
+  return false;
+}
+
+export function DealDetail({ deal, user, underwriters, auditEntries = [], kickbackReasons = [], userLastViewedAt }: Readonly<DealDetailProps>) {
   const router = useRouter();
   const [showKickbackModal, setShowKickbackModal] = useState(false);
   const [kickbackMessage, setKickbackMessage] = useState('');
@@ -358,29 +391,7 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
   // Only show banner for the most recent unresolved kickback
   const latestKickback = kickbackReasons.length > 0 ? kickbackReasons[0] : null;
 
-  const kickbackBannerMode: 'recipient_needs_response' | 'kicker_first_view_response' | false = (() => {
-    if (!latestKickback) return false;
-
-    const isKickedBackStatus = deal.status === 'kicked_back_to_manager' || deal.status === 'kicked_back_to_sales';
-    const isRecipient = latestKickback.kicked_to_user_id === user.id;
-    const isKicker = latestKickback.kicked_by_user_id === user.id;
-
-    // Case 1: Recipient sees unresolved kickback while deal is in kicked_back status
-    if (isKickedBackStatus && isRecipient && !latestKickback.is_resolved) {
-      return 'recipient_needs_response';
-    }
-
-    // Case 2: Kicker sees the response on first view after it was submitted
-    if (isKicker && latestKickback.is_resolved && latestKickback.responded_at) {
-      const respondedAt = new Date(latestKickback.responded_at).getTime();
-      const lastViewed = userLastViewedAt ? new Date(userLastViewedAt).getTime() : 0;
-      if (respondedAt > lastViewed) {
-        return 'kicker_first_view_response';
-      }
-    }
-
-    return false;
-  })();
+  const kickbackBannerMode: KickbackBannerMode = determineKickbackBannerMode(deal, user.id, latestKickback, userLastViewedAt);
 
   const handleKickbackResponse = async () => {
     if (!latestKickback || !kickbackResponseText.trim()) return;
@@ -394,16 +405,6 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
     }
   };
 
-  // ---- Determine if the deal has been sent to underwriting (for history logging threshold) ----
-  const POST_UNDERWRITING_STATUSES: DealStatus[] = [
-    'submitted_to_underwriting', 'kicked_back_to_manager',
-    'kicked_back_to_sales', 'submitted_to_lender',
-    'approved', 'signed_and_delivered', 'cancelled',
-  ];
-  // We consider the deal "post-underwriting" if it has ever been sent to underwriting
-  const hasBeenSentToUnderwriting = deal.status_history?.some(
-    (h: any) => POST_UNDERWRITING_STATUSES.includes(h.to_status)
-  ) || POST_UNDERWRITING_STATUSES.includes(deal.status);
 
   const handleApproveForward = async () => {
     setLoading(true);

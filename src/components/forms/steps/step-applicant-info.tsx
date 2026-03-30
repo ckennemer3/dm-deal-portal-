@@ -10,7 +10,7 @@ interface StepProps {
   errors: Record<string, string>;
 }
 
-export function StepApplicantInfo({ formData, updateFormData, errors }: StepProps) {
+export function StepApplicantInfo({ formData, updateFormData, errors }: Readonly<StepProps>) {
   const updateApplicant = (index: number, field: string, value: string) => {
     const updated = [...formData.applicants];
     updated[index] = { ...updated[index], [field]: value };
@@ -20,7 +20,7 @@ export function StepApplicantInfo({ formData, updateFormData, errors }: StepProp
   return (
     <div className="space-y-6">
       {formData.applicants.map((app, i) => (
-        <Card key={i} padding="md" className="space-y-4">
+        <Card key={`applicant-${i}`} padding="md" className="space-y-4">
           <h3 className="font-medium text-surface-900">
             Applicant {i + 1} {i === 0 && '(Primary)'}
           </h3>

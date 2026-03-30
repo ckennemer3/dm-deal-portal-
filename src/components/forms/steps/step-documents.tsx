@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { DealFormData, DealType, DocumentType } from '@/lib/types';
 import { REQUIRED_DOCUMENTS, OPTIONAL_DOCUMENTS, DOCUMENT_TYPE_LABELS } from '@/lib/constants';
 import { FileUpload } from '@/components/ui/file-upload';
@@ -15,14 +14,14 @@ interface StepDocumentsProps {
   onOtherLabelChange?: (label: string) => void;
 }
 
-export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemove, otherDocLabel = '', onOtherLabelChange }: StepDocumentsProps) {
+export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemove, otherDocLabel = '', onOtherLabelChange }: Readonly<StepDocumentsProps>) {
   const dealType = formData.deal_type;
   const condition = formData.vehicle_condition;
 
   if (!dealType) return <p className="text-surface-500">Select a deal type first.</p>;
 
   // Get required documents
-  let requiredDocs: DocumentType[] = [...(REQUIRED_DOCUMENTS[dealType as DealType] || [])];
+  let requiredDocs: DocumentType[] = [...(REQUIRED_DOCUMENTS[dealType] || [])];
 
   // Add JD Power if lease + used vehicle
   if (dealType === 'lease' && condition === 'used' && !requiredDocs.includes('jd_power_book_outs')) {

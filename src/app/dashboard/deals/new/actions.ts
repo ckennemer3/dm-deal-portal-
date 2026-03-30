@@ -2,8 +2,112 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { DealFormData } from '@/lib/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Builds the flat insert payload for the deals table, converting string form
+ * values to the correct numeric types and applying conditional defaults.
+ */
+function buildDealInsertData(
+  formData: DealFormData,
+  authUserId: string,
+  managerId: string,
+  vehicleCondition: string | null
+) {
+  return {
+    deal_type: formData.deal_type,
+    status: 'pending_manager_review' as const,
+    submitted_by: authUserId,
+    assigned_manager: managerId,
+    num_applicants: formData.num_applicants,
+    vehicle_condition: vehicleCondition,
+    vehicle_year: formData.vehicle_year,
+    vehicle_make: formData.vehicle_make,
+    vehicle_model: formData.vehicle_model,
+    vehicle_trim: formData.vehicle_trim,
+    vehicle_mileage: formData.vehicle_mileage ? Number.parseInt(formData.vehicle_mileage) : null,
+    msrp: formData.msrp ? Number.parseFloat(formData.msrp) : null,
+    invoice: formData.invoice ? Number.parseFloat(formData.invoice) : null,
+    jd_power_retail: formData.jd_power_retail ? Number.parseFloat(formData.jd_power_retail) : null,
+    jd_power_wholesale: formData.jd_power_wholesale ? Number.parseFloat(formData.jd_power_wholesale) : null,
+    net_cap_cost: formData.net_cap_cost ? Number.parseFloat(formData.net_cap_cost) : null,
+    total_amount_financed: formData.total_amount_financed ? Number.parseFloat(formData.total_amount_financed) : null,
+    monthly_payment: Number.parseFloat(formData.monthly_payment),
+    term: formData.term ? Number.parseInt(formData.term) : null,
+    has_trade_in: formData.has_trade_in === true,
+    has_open_autos: formData.has_open_autos === true,
+    has_business: formData.adding_business,
+    business_legal_name: formData.adding_business ? formData.business_legal_name : null,
+    deal_strengths: formData.deal_strengths,
+    has_derogatory_credit: formData.has_derogatory_credit === true,
+    derogatory_credit_explanation: formData.has_derogatory_credit ? formData.derogatory_credit_explanation : null,
+  };
+}
+
+/**
+ * Inserts deal_applicants rows for each applicant in the form data.
+ */
+async function insertApplicants(
+  supabase: SupabaseClient,
+  dealId: string,
+  applicants: DealFormData['applicants'],
+  numApplicants: number
+) {
+  for (let i = 0; i < numApplicants; i++) {
+    const app = applicants[i];
+    await supabase.from('deal_applicants').insert({
+      deal_id: dealId,
+      applicant_number: i + 1,
+      first_name: app.first_name,
+      last_name: app.last_name,
+      experian_score: Number.parseInt(app.experian_score),
+      has_alternate_bureau: app.has_alternate_bureau,
+      alternate_bureau: app.has_alternate_bureau ? app.alternate_bureau || null : null,
+      alternate_score: app.has_alternate_bureau && app.alternate_score ? Number.parseInt(app.alternate_score) : null,
+    });
+  }
+}
+
+/**
+ * Inserts a deal_trade_ins row for the given deal.
+ */
+async function insertTradeIn(
+  supabase: SupabaseClient,
+  dealId: string,
+  tradeIn: DealFormData['trade_in']
+) {
+  await supabase.from('deal_trade_ins').insert({
+    deal_id: dealId,
+    year: tradeIn.year,
+    make: tradeIn.make,
+    model: tradeIn.model,
+    monthly_payment: Number.parseFloat(tradeIn.monthly_payment),
+    lienholder: tradeIn.lienholder,
+    who_drives: tradeIn.who_drives,
+  });
+}
+
+/**
+ * Inserts deal_open_autos rows for each open auto in the form data.
+ */
+async function insertOpenAutos(
+  supabase: SupabaseClient,
+  dealId: string,
+  openAutos: DealFormData['open_autos'],
+  numOpenAutos: number
+) {
+  for (let i = 0; i < numOpenAutos; i++) {
+    const auto = openAutos[i];
+    await supabase.from('deal_open_autos').insert({
+      deal_id: dealId,
+      auto_number: i + 1,
+      lienholder: auto.lienholder,
+      monthly_payment: Number.parseFloat(auto.monthly_payment),
+      who_drives: auto.who_drives,
+    });
+  }
+}
 
 export async function submitDeal(formData: DealFormData) {
   const supabase = await createClient();
@@ -28,88 +132,26 @@ export async function submitDeal(formData: DealFormData) {
     }
   }
 
-  // Determine vehicle condition
-  let vehicleCondition = formData.vehicle_condition;
-  if (formData.deal_type === 're_lease' || formData.deal_type === 'retail_purchase' || formData.deal_type === 'lease_buyout') {
-    vehicleCondition = 'used';
-  }
+  // Determine vehicle condition — used deal types always set condition to 'used'
+  const USED_DEAL_TYPES = ['re_lease', 'retail_purchase', 'lease_buyout'];
+  const vehicleCondition = USED_DEAL_TYPES.includes(formData.deal_type) ? 'used' : formData.vehicle_condition;
 
   // Insert deal
-  const { data: deal, error: dealError } = await supabase
-    .from('deals')
-    .insert({
-      deal_type: formData.deal_type,
-      status: 'pending_manager_review',
-      submitted_by: authUser.id,
-      assigned_manager: managerId,
-      num_applicants: formData.num_applicants,
-      vehicle_condition: vehicleCondition,
-      vehicle_year: formData.vehicle_year,
-      vehicle_make: formData.vehicle_make,
-      vehicle_model: formData.vehicle_model,
-      vehicle_trim: formData.vehicle_trim,
-      vehicle_mileage: formData.vehicle_mileage ? parseInt(formData.vehicle_mileage) : null,
-      msrp: formData.msrp ? parseFloat(formData.msrp) : null,
-      invoice: formData.invoice ? parseFloat(formData.invoice) : null,
-      jd_power_retail: formData.jd_power_retail ? parseFloat(formData.jd_power_retail) : null,
-      jd_power_wholesale: formData.jd_power_wholesale ? parseFloat(formData.jd_power_wholesale) : null,
-      net_cap_cost: formData.net_cap_cost ? parseFloat(formData.net_cap_cost) : null,
-      total_amount_financed: formData.total_amount_financed ? parseFloat(formData.total_amount_financed) : null,
-      monthly_payment: parseFloat(formData.monthly_payment),
-      term: formData.term ? parseInt(formData.term) : null,
-      has_trade_in: formData.has_trade_in === true,
-      has_open_autos: formData.has_open_autos === true,
-      has_business: formData.adding_business,
-      business_legal_name: formData.adding_business ? formData.business_legal_name : null,
-      deal_strengths: formData.deal_strengths,
-      has_derogatory_credit: formData.has_derogatory_credit === true,
-      derogatory_credit_explanation: formData.has_derogatory_credit ? formData.derogatory_credit_explanation : null,
-    })
-    .select()
-    .single();
-
+  const insertData = buildDealInsertData(formData, authUser.id, managerId, vehicleCondition);
+  const { data: deal, error: dealError } = await supabase.from('deals').insert(insertData).select().single();
   if (dealError) throw new Error(dealError.message);
 
   // Insert applicants
-  for (let i = 0; i < formData.num_applicants; i++) {
-    const app = formData.applicants[i];
-    await supabase.from('deal_applicants').insert({
-      deal_id: deal.id,
-      applicant_number: i + 1,
-      first_name: app.first_name,
-      last_name: app.last_name,
-      experian_score: parseInt(app.experian_score),
-      has_alternate_bureau: app.has_alternate_bureau,
-      alternate_bureau: app.has_alternate_bureau ? app.alternate_bureau || null : null,
-      alternate_score: app.has_alternate_bureau && app.alternate_score ? parseInt(app.alternate_score) : null,
-    });
-  }
+  await insertApplicants(supabase, deal.id, formData.applicants, formData.num_applicants);
 
   // Insert trade-in if applicable
   if (formData.has_trade_in) {
-    await supabase.from('deal_trade_ins').insert({
-      deal_id: deal.id,
-      year: formData.trade_in.year,
-      make: formData.trade_in.make,
-      model: formData.trade_in.model,
-      monthly_payment: parseFloat(formData.trade_in.monthly_payment),
-      lienholder: formData.trade_in.lienholder,
-      who_drives: formData.trade_in.who_drives,
-    });
+    await insertTradeIn(supabase, deal.id, formData.trade_in);
   }
 
   // Insert open autos if applicable
   if (formData.has_open_autos) {
-    for (let i = 0; i < formData.num_open_autos; i++) {
-      const auto = formData.open_autos[i];
-      await supabase.from('deal_open_autos').insert({
-        deal_id: deal.id,
-        auto_number: i + 1,
-        lienholder: auto.lienholder,
-        monthly_payment: parseFloat(auto.monthly_payment),
-        who_drives: auto.who_drives,
-      });
-    }
+    await insertOpenAutos(supabase, deal.id, formData.open_autos, formData.num_open_autos);
   }
 
   // Insert initial status history

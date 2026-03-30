@@ -17,7 +17,7 @@ interface CommunicationThreadProps {
   canSendAction: boolean;
 }
 
-export function CommunicationThread({ dealId, messages, user, canSend, canSendAction }: CommunicationThreadProps) {
+export function CommunicationThread({ dealId, messages, user, canSend, canSendAction }: Readonly<CommunicationThreadProps>) {
   const router = useRouter();
   const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);

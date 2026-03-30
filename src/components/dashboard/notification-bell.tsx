@@ -10,10 +10,21 @@ interface NotificationBellProps {
   userId: string;
 }
 
+function formatTimeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 /**
  * Notification bell with unread badge, dropdown panel, and toast notifications.
  */
-export function NotificationBell({ userId }: NotificationBellProps) {
+export function NotificationBell({ userId }: Readonly<NotificationBellProps>) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -43,17 +54,6 @@ export function NotificationBell({ userId }: NotificationBellProps) {
     if (notif.deal_id) {
       router.push(`/dashboard/deals/${notif.deal_id}`);
     }
-  }
-
-  function formatTimeAgo(dateStr: string): string {
-    const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (seconds < 60) return 'just now';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
   }
 
   return (
@@ -100,7 +100,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
                     className={`w-full text-left px-4 py-3 hover:bg-surface-50 transition-colors border-b border-surface-50 last:border-0 ${
-                      !notif.is_read ? 'bg-brand-50/50' : ''
+                      notif.is_read ? '' : 'bg-brand-50/50'
                     }`}
                   >
                     <div className="flex items-start gap-2">

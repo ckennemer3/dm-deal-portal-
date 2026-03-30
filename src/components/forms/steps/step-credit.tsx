@@ -13,12 +13,16 @@ interface StepProps {
   errors: Record<string, string>;
 }
 
-export function StepCredit({ formData, updateFormData, errors }: StepProps) {
+export function StepCredit({ formData, updateFormData, errors }: Readonly<StepProps>) {
   const updateApplicant = (index: number, field: string, value: any) => {
     const updated = [...formData.applicants];
     updated[index] = { ...updated[index], [field]: value };
     updateFormData({ applicants: updated });
   };
+
+  const derogatoryValue = formData.has_derogatory_credit === null
+    ? ''
+    : formData.has_derogatory_credit ? 'yes' : 'no';
 
   return (
     <div className="space-y-6">
@@ -38,7 +42,7 @@ export function StepCredit({ formData, updateFormData, errors }: StepProps) {
             </thead>
             <tbody className="divide-y divide-surface-100">
               {formData.applicants.map((app, i) => (
-                <tr key={i}>
+                <tr key={`credit-${i}`}>
                   <td className="py-3 pr-4">
                     <span className="text-sm text-surface-900">
                       {app.first_name || 'Applicant'} {app.last_name || (i + 1)}
@@ -114,7 +118,7 @@ export function StepCredit({ formData, updateFormData, errors }: StepProps) {
           { value: 'yes', label: 'Yes' },
           { value: 'no', label: 'No' },
         ]}
-        value={formData.has_derogatory_credit === null ? '' : formData.has_derogatory_credit ? 'yes' : 'no'}
+        value={derogatoryValue}
         onChange={(value) => updateFormData({ has_derogatory_credit: value === 'yes' })}
         error={errors.has_derogatory_credit}
       />

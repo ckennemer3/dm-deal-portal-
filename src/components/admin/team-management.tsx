@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { UserWithRelations, Office } from '@/lib/types';
+import { UserWithRelations, Office, Team } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -16,9 +16,9 @@ interface TeamManagementProps {
   users: UserWithRelations[];
 }
 
-export function TeamManagement({ teams, offices, users }: TeamManagementProps) {
+export function TeamManagement({ teams, offices, users }: Readonly<TeamManagementProps>) {
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingTeam, setEditingTeam] = useState<any | null>(null);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -151,13 +151,13 @@ export function TeamManagement({ teams, offices, users }: TeamManagementProps) {
           <div className="space-y-4">
             {error && <div className="p-3 rounded-lg bg-red-50 border border-red-200"><p className="text-sm text-red-700">{error}</p></div>}
             <Input label="Team Name" value={editingTeam.name}
-              onChange={(e) => setEditingTeam((p: any) => ({ ...p, name: e.target.value }))} />
+              onChange={(e) => setEditingTeam((p) => p ? { ...p, name: e.target.value } : p)} />
             <Select label="Office" options={officeOptions}
               value={editingTeam.office_id || editingTeam.office?.id || ''}
-              onChange={(e) => setEditingTeam((p: any) => ({ ...p, office_id: e.target.value }))} />
+              onChange={(e) => setEditingTeam((p) => p ? { ...p, office_id: e.target.value } : p)} />
             <Select label="Manager" options={[{ value: '', label: 'No manager' }, ...managerOptions]}
               value={editingTeam.manager_id || editingTeam.manager?.id || ''}
-              onChange={(e) => setEditingTeam((p: any) => ({ ...p, manager_id: e.target.value }))} />
+              onChange={(e) => setEditingTeam((p) => p ? { ...p, manager_id: e.target.value } : p)} />
           </div>
         )}
       </Modal>

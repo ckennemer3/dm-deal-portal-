@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserWithRelations, DealStatus, DealType } from '@/lib/types';
+import { UserWithRelations, DealType } from '@/lib/types';
 import { DEAL_STATUS_CONFIG, DEAL_TYPE_LABELS, ACTIVE_DEAL_STATUSES, AWAITING_ACTION_STATUSES } from '@/lib/constants';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -43,7 +43,7 @@ export function DealsList({
   dealViews = {},
   initialStatusFilter = '',
   initialDeliveredMonth = '',
-}: DealsListProps) {
+}: Readonly<DealsListProps>) {
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(resolveStatusFilter(initialStatusFilter));

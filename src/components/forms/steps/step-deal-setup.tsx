@@ -10,7 +10,7 @@ interface StepProps {
   errors: Record<string, string>;
 }
 
-export function StepDealSetup({ formData, updateFormData, errors }: StepProps) {
+export function StepDealSetup({ formData, updateFormData, errors }: Readonly<StepProps>) {
   return (
     <div className="space-y-6">
       <RadioGroup
@@ -38,7 +38,7 @@ export function StepDealSetup({ formData, updateFormData, errors }: StepProps) {
             { value: '3', label: '3' },
           ]}
           value={String(formData.num_applicants)}
-          onChange={(e) => updateFormData({ num_applicants: parseInt(e.target.value) })}
+          onChange={(e) => updateFormData({ num_applicants: Number.parseInt(e.target.value) })}
           className="max-w-[200px]"
         />
 

@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 export default function DashboardError({
   error,
   reset,
-}: {
+}: Readonly<{
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}>) {
   useEffect(() => {
     console.error('[DashboardError]', error);
   }, [error]);
@@ -28,7 +28,7 @@ export default function DashboardError({
         </p>
         <div className="flex items-center justify-center gap-3">
           <Button onClick={reset} size="sm">Try Again</Button>
-          <Button variant="secondary" size="sm" onClick={() => window.location.href = '/dashboard'}>
+          <Button variant="secondary" size="sm" onClick={() => globalThis.location.href = '/dashboard'}>
             Back to Dashboard
           </Button>
         </div>

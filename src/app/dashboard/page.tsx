@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { UserRole } from '@/lib/types';
-import { ROLE_LABELS, TERMINAL_STATUSES, ACTIVE_DEAL_STATUSES, AWAITING_ACTION_STATUSES } from '@/lib/constants';
+import { ROLE_LABELS, TERMINAL_STATUSES, AWAITING_ACTION_STATUSES } from '@/lib/constants';
 import { formatDuration } from '@/lib/utils';
 import { SubmittedDealsQueue } from '@/components/dashboard/submitted-deals-queue';
 import { UnderwriterDashboard } from '@/components/dashboard/underwriter-dashboard';
@@ -122,6 +122,13 @@ function getQuickActions(role: UserRole): QuickAction[] {
 
 // Terminal and awaiting-action statuses imported from @/lib/constants
 
+function scopeQueryByRole<T extends { eq: (col: string, val: string) => T }>(query: T, effectiveRole: string, userId: string): T {
+  if (effectiveRole === 'agent') {
+    return query.eq('submitted_by', userId);
+  }
+  return query;
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -162,9 +169,7 @@ export default async function DashboardPage() {
     .select('id', { count: 'exact', head: true })
     .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`);
 
-  if (effectiveRole === 'agent') {
-    activeDealsQuery = activeDealsQuery.eq('submitted_by', authUser.id);
-  }
+  activeDealsQuery = scopeQueryByRole(activeDealsQuery, effectiveRole, authUser.id);
 
   // 2. Deals awaiting action
   let awaitingQuery = supabase
@@ -172,9 +177,7 @@ export default async function DashboardPage() {
     .select('id', { count: 'exact', head: true })
     .in('status', AWAITING_ACTION_STATUSES);
 
-  if (effectiveRole === 'agent') {
-    awaitingQuery = awaitingQuery.eq('submitted_by', authUser.id);
-  }
+  awaitingQuery = scopeQueryByRole(awaitingQuery, effectiveRole, authUser.id);
 
   // 3. Completed this month
   const startOfMonth = new Date();
@@ -187,9 +190,7 @@ export default async function DashboardPage() {
     .eq('status', 'signed_and_delivered')
     .gte('updated_at', startOfMonth.toISOString());
 
-  if (effectiveRole === 'agent') {
-    completedQuery = completedQuery.eq('submitted_by', authUser.id);
-  }
+  completedQuery = scopeQueryByRole(completedQuery, effectiveRole, authUser.id);
 
   // 4. Active deals with timestamps to compute avg time in current status
   let avgTimeQuery = supabase
@@ -198,9 +199,7 @@ export default async function DashboardPage() {
     .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
     .limit(200);
 
-  if (effectiveRole === 'agent') {
-    avgTimeQuery = avgTimeQuery.eq('submitted_by', authUser.id);
-  }
+  avgTimeQuery = scopeQueryByRole(avgTimeQuery, effectiveRole, authUser.id);
 
   // 5. Deals queue — all non-terminal deals (agents see only their own)
   let submittedDealsQueryBuilder = supabase
@@ -215,9 +214,7 @@ export default async function DashboardPage() {
     .not('status', 'in', `(${TERMINAL_STATUSES.join(',')})`)
     .order('created_at', { ascending: false });
 
-  if (effectiveRole === 'agent') {
-    submittedDealsQueryBuilder = submittedDealsQueryBuilder.eq('submitted_by', authUser.id);
-  }
+  submittedDealsQueryBuilder = scopeQueryByRole(submittedDealsQueryBuilder, effectiveRole, authUser.id);
 
   const submittedDealsQuery = submittedDealsQueryBuilder;
 
@@ -269,7 +266,14 @@ export default async function DashboardPage() {
 
   // Greeting based on time of day
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  let greeting: string;
+  if (hour < 12) {
+    greeting = 'Good morning';
+  } else if (hour < 17) {
+    greeting = 'Good afternoon';
+  } else {
+    greeting = 'Good evening';
+  }
 
   // ---- Underwriter Dashboard ----
   if (effectiveRole === 'underwriter') {

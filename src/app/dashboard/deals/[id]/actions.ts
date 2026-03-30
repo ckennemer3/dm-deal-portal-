@@ -11,6 +11,36 @@ interface StatusUpdateOptions {
   kickbackExplanation?: string;
 }
 
+/**
+ * Determines the audit action type and description for a deal status change.
+ */
+function determineAuditAction(
+  dealStatus: string,
+  newStatus: DealStatus,
+  options?: StatusUpdateOptions
+): { auditAction: 'deal_kicked_back' | 'deal_resubmitted' | 'status_changed'; auditDescription: string } {
+  const isKickback = newStatus === 'kicked_back_to_manager' || newStatus === 'kicked_back_to_sales';
+  const isResubmit =
+    (dealStatus === 'kicked_back_to_sales' && newStatus === 'pending_manager_review') ||
+    (dealStatus === 'kicked_back_to_manager' && newStatus === 'submitted_to_underwriting');
+
+  if (isKickback) {
+    const reasonLabel = options?.kickbackReason ? KICKBACK_REASON_LABELS[options.kickbackReason] : 'N/A';
+    const explanation = options?.kickbackExplanation ? ` — ${options.kickbackExplanation}` : '';
+    return { auditAction: 'deal_kicked_back', auditDescription: `Deal kicked back: ${reasonLabel}${explanation}` };
+  }
+  if (isResubmit) {
+    return {
+      auditAction: 'deal_resubmitted',
+      auditDescription: `Deal resubmitted from ${DEAL_STATUS_CONFIG[dealStatus as DealStatus]?.label || dealStatus}`,
+    };
+  }
+  return {
+    auditAction: 'status_changed',
+    auditDescription: `Status changed to ${DEAL_STATUS_CONFIG[newStatus]?.label || newStatus}`,
+  };
+}
+
 export async function updateDealStatus(dealId: string, newStatus: DealStatus, notes?: string, options?: StatusUpdateOptions) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,25 +62,8 @@ export async function updateDealStatus(dealId: string, newStatus: DealStatus, no
     ...(options?.kickbackExplanation && { kickback_explanation: options.kickbackExplanation }),
   });
 
-  // Determine audit action type
+  const { auditAction, auditDescription } = determineAuditAction(deal.status, newStatus, options);
   const isKickback = newStatus === 'kicked_back_to_manager' || newStatus === 'kicked_back_to_sales';
-  const isResubmit = (deal.status === 'kicked_back_to_sales' && newStatus === 'pending_manager_review')
-    || (deal.status === 'kicked_back_to_manager' && newStatus === 'submitted_to_underwriting');
-
-  let auditAction: 'deal_kicked_back' | 'deal_resubmitted' | 'status_changed';
-  let auditDescription: string;
-
-  if (isKickback) {
-    auditAction = 'deal_kicked_back';
-    const reasonLabel = options?.kickbackReason ? KICKBACK_REASON_LABELS[options.kickbackReason] : 'N/A';
-    auditDescription = `Deal kicked back: ${reasonLabel}${options?.kickbackExplanation ? ` — ${options.kickbackExplanation}` : ''}`;
-  } else if (isResubmit) {
-    auditAction = 'deal_resubmitted';
-    auditDescription = `Deal resubmitted from ${DEAL_STATUS_CONFIG[deal.status as DealStatus]?.label || deal.status}`;
-  } else {
-    auditAction = 'status_changed';
-    auditDescription = `Status changed to ${DEAL_STATUS_CONFIG[newStatus]?.label || newStatus}`;
-  }
 
   await logAuditEvent({
     dealId,

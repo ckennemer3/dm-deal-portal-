@@ -26,9 +26,9 @@ import {
 
 export default async function ReportingPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<Record<string, string | undefined>>;
-}) {
+}>) {
   const supabase = await createClient();
   const { data: { user: authUser } } = await supabase.auth.getUser();
   if (!authUser) redirect('/auth/login');

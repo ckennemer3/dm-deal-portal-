@@ -4,12 +4,10 @@ import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { UserWithRelations, UserRole } from '@/lib/types';
 import { ROLE_LABELS } from '@/lib/constants';
-import { canAccessAdminPanel, canAccessReporting, canSubmitDeals } from '@/lib/permissions';
 import { createClient } from '@/lib/supabase/client';
-import { getInitials } from '@/lib/utils';
 import { RoleSwitcherProvider, useRoleSwitcher } from '@/contexts/role-switcher-context';
 import { NotificationBell } from './notification-bell';
 
@@ -25,24 +23,18 @@ interface NavItem {
 }
 
 function getNavItems(role: string): NavItem[] {
-  const items: NavItem[] = [
+  return [
     { label: 'Dashboard', href: '/dashboard', icon: 'home' },
+    ...(role === 'agent' || role === 'administrator'
+      ? [{ label: 'Submit Deal', href: '/dashboard/deals/new', icon: 'plus' }]
+      : []),
+    { label: 'Deals', href: '/dashboard/deals', icon: 'document' },
+    // All roles get reporting access (My Metrics tab is available to everyone)
+    { label: 'Reporting', href: '/dashboard/reporting', icon: 'chart' },
+    ...(role === 'administrator'
+      ? [{ label: 'Admin', href: '/dashboard/admin', icon: 'cog' }]
+      : []),
   ];
-
-  if (role === 'agent' || role === 'administrator') {
-    items.push({ label: 'Submit Deal', href: '/dashboard/deals/new', icon: 'plus' });
-  }
-
-  items.push({ label: 'Deals', href: '/dashboard/deals', icon: 'document' });
-
-  // All roles get reporting access (My Metrics tab is available to everyone)
-  items.push({ label: 'Reporting', href: '/dashboard/reporting', icon: 'chart' });
-
-  if (role === 'administrator') {
-    items.push({ label: 'Admin', href: '/dashboard/admin', icon: 'cog' });
-  }
-
-  return items;
 }
 
 const iconPaths: Record<string, string> = {
@@ -59,7 +51,7 @@ const ALL_ROLES: UserRole[] = ['administrator', 'general_manager', 'manager', 'a
  * DashboardShell wraps admin users in RoleSwitcherProvider so they can
  * use the "view as" feature. Non-admin users render directly without the provider.
  */
-export function DashboardShell({ user, children }: DashboardShellProps) {
+export function DashboardShell({ user, children }: Readonly<DashboardShellProps>) {
   if (user.role === 'administrator') {
     return (
       <RoleSwitcherProvider actualRole={user.role}>
@@ -74,7 +66,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
 /**
  * Admin-specific inner component that consumes the RoleSwitcher context.
  */
-function AdminDashboardShellInner({ user, children }: DashboardShellProps) {
+function AdminDashboardShellInner({ user, children }: Readonly<DashboardShellProps>) {
   const { effectiveRole, isViewingAs, setViewAsRole } = useRoleSwitcher();
 
   return (
@@ -97,7 +89,7 @@ interface DashboardShellContentProps {
   onRoleChange?: (role: UserRole | null) => void;
 }
 
-function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onRoleChange }: DashboardShellContentProps) {
+function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onRoleChange }: Readonly<DashboardShellContentProps>) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -135,7 +127,10 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          role="button"
+          tabIndex={0}
           onClick={() => setSidebarOpen(false)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSidebarOpen(false); }}
         />
       )}
 

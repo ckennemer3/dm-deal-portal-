@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 export default function GlobalError({
   error,
   reset,
-}: {
+}: Readonly<{
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}>) {
   useEffect(() => {
     console.error('[GlobalError]', error);
   }, [error]);
@@ -31,7 +31,7 @@ export default function GlobalError({
         </p>
         <div className="flex items-center justify-center gap-3">
           <Button onClick={reset}>Try Again</Button>
-          <Button variant="secondary" onClick={() => window.location.href = '/dashboard'}>
+          <Button variant="secondary" onClick={() => globalThis.location.href = '/dashboard'}>
             Go to Dashboard
           </Button>
         </div>

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { UserWithRelations, DealFormData, DealType } from '@/lib/types';
+import { UserWithRelations, DealFormData } from '@/lib/types';
 import { FORM_STEPS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { StepDealSetup } from './steps/step-deal-setup';
@@ -15,6 +15,72 @@ import { StepCredit } from './steps/step-credit';
 import { StepDocuments } from './steps/step-documents';
 import { submitDeal } from '@/app/dashboard/deals/new/actions';
 import { uploadDocument } from '@/app/dashboard/deals/actions-documents';
+
+// --- Per-step validation helpers (module scope to keep validateStep simple) ---
+
+function validateDealSetup(formData: DealFormData, errors: Record<string, string>) {
+  if (!formData.deal_type) errors.deal_type = 'Deal type is required';
+}
+
+function validateApplicantInfo(formData: DealFormData, errors: Record<string, string>) {
+  formData.applicants.forEach((app, i) => {
+    if (!app.first_name.trim()) errors[`applicant_${i}_first_name`] = 'Required';
+    if (!app.last_name.trim()) errors[`applicant_${i}_last_name`] = 'Required';
+  });
+  if (formData.adding_business && !formData.business_legal_name.trim()) {
+    errors.business_legal_name = 'Business name is required';
+  }
+}
+
+function validateVehicleInfo(formData: DealFormData, errors: Record<string, string>) {
+  if (!formData.vehicle_condition && formData.deal_type === 'lease') errors.vehicle_condition = 'Required';
+  if (!formData.vehicle_year.trim()) errors.vehicle_year = 'Required';
+  if (!formData.vehicle_make.trim()) errors.vehicle_make = 'Required';
+  if (!formData.vehicle_model.trim()) errors.vehicle_model = 'Required';
+  if (!formData.vehicle_trim.trim()) errors.vehicle_trim = 'Required';
+  if (!formData.monthly_payment.trim()) errors.monthly_payment = 'Required';
+}
+
+function validateTradeIn(formData: DealFormData, errors: Record<string, string>) {
+  if (formData.has_trade_in === null) { errors.has_trade_in = 'Required'; return; }
+  if (!formData.has_trade_in) return;
+  if (!formData.trade_in.year.trim()) errors.trade_in_year = 'Required';
+  if (!formData.trade_in.make.trim()) errors.trade_in_make = 'Required';
+  if (!formData.trade_in.model.trim()) errors.trade_in_model = 'Required';
+  if (!formData.trade_in.monthly_payment.trim()) errors.trade_in_payment = 'Required';
+  if (!formData.trade_in.lienholder.trim()) errors.trade_in_lienholder = 'Required';
+  if (!formData.trade_in.who_drives.trim()) errors.trade_in_who_drives = 'Required';
+}
+
+function validateOpenAutos(formData: DealFormData, errors: Record<string, string>) {
+  if (formData.has_open_autos === null) { errors.has_open_autos = 'Required'; return; }
+  if (!formData.has_open_autos) return;
+  formData.open_autos.forEach((auto, i) => {
+    if (!auto.lienholder.trim()) errors[`auto_${i}_lienholder`] = 'Required';
+    if (!auto.monthly_payment.trim()) errors[`auto_${i}_payment`] = 'Required';
+    if (!auto.who_drives.trim()) errors[`auto_${i}_who_drives`] = 'Required';
+  });
+}
+
+function validateCredit(formData: DealFormData, errors: Record<string, string>) {
+  formData.applicants.forEach((app, i) => {
+    if (!app.experian_score.trim()) errors[`applicant_${i}_score`] = 'Required';
+  });
+  if (!formData.deal_strengths.trim()) errors.deal_strengths = 'Required';
+  if (formData.has_derogatory_credit === null) errors.has_derogatory_credit = 'Required';
+  if (formData.has_derogatory_credit && !formData.derogatory_credit_explanation.trim()) {
+    errors.derogatory_explanation = 'Required';
+  }
+}
+
+const STEP_VALIDATORS: Record<number, (formData: DealFormData, errors: Record<string, string>) => void> = {
+  1: validateDealSetup,
+  2: validateApplicantInfo,
+  3: validateVehicleInfo,
+  4: validateTradeIn,
+  5: validateOpenAutos,
+  6: validateCredit,
+};
 
 interface DealFormWizardProps {
   user: UserWithRelations;
@@ -41,7 +107,7 @@ const initialFormData: DealFormData = {
   derogatory_credit_explanation: '',
 };
 
-export function DealFormWizard({ user }: DealFormWizardProps) {
+export function DealFormWizard({ user }: Readonly<DealFormWizardProps>) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<DealFormData>(initialFormData);
@@ -63,7 +129,7 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
         const count = updates.num_applicants;
         const current = prev.applicants;
         if (count > current.length) {
-          next.applicants = [...current, ...Array(count - current.length).fill(null).map(() => (
+          next.applicants = [...current, ...new Array(count - current.length).fill(null).map(() => (
             { first_name: '', last_name: '', experian_score: '', has_alternate_bureau: false, alternate_bureau: '' as const, alternate_score: '' }
           ))];
         } else {
@@ -76,7 +142,7 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
         const count = updates.num_open_autos;
         const current = prev.open_autos;
         if (count > current.length) {
-          next.open_autos = [...current, ...Array(count - current.length).fill(null).map(() => (
+          next.open_autos = [...current, ...new Array(count - current.length).fill(null).map(() => (
             { lienholder: '', monthly_payment: '', who_drives: '' }
           ))];
         } else {
@@ -108,61 +174,7 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
-
-    switch (step) {
-      case 1:
-        if (!formData.deal_type) newErrors.deal_type = 'Deal type is required';
-        break;
-      case 2:
-        formData.applicants.forEach((app, i) => {
-          if (!app.first_name.trim()) newErrors[`applicant_${i}_first_name`] = 'Required';
-          if (!app.last_name.trim()) newErrors[`applicant_${i}_last_name`] = 'Required';
-        });
-        if (formData.adding_business && !formData.business_legal_name.trim()) {
-          newErrors.business_legal_name = 'Business name is required';
-        }
-        break;
-      case 3:
-        if (!formData.vehicle_condition && formData.deal_type === 'lease') newErrors.vehicle_condition = 'Required';
-        if (!formData.vehicle_year.trim()) newErrors.vehicle_year = 'Required';
-        if (!formData.vehicle_make.trim()) newErrors.vehicle_make = 'Required';
-        if (!formData.vehicle_model.trim()) newErrors.vehicle_model = 'Required';
-        if (!formData.vehicle_trim.trim()) newErrors.vehicle_trim = 'Required';
-        if (!formData.monthly_payment.trim()) newErrors.monthly_payment = 'Required';
-        break;
-      case 4:
-        if (formData.has_trade_in === null) newErrors.has_trade_in = 'Required';
-        if (formData.has_trade_in) {
-          if (!formData.trade_in.year.trim()) newErrors.trade_in_year = 'Required';
-          if (!formData.trade_in.make.trim()) newErrors.trade_in_make = 'Required';
-          if (!formData.trade_in.model.trim()) newErrors.trade_in_model = 'Required';
-          if (!formData.trade_in.monthly_payment.trim()) newErrors.trade_in_payment = 'Required';
-          if (!formData.trade_in.lienholder.trim()) newErrors.trade_in_lienholder = 'Required';
-          if (!formData.trade_in.who_drives.trim()) newErrors.trade_in_who_drives = 'Required';
-        }
-        break;
-      case 5:
-        if (formData.has_open_autos === null) newErrors.has_open_autos = 'Required';
-        if (formData.has_open_autos) {
-          formData.open_autos.forEach((auto, i) => {
-            if (!auto.lienholder.trim()) newErrors[`auto_${i}_lienholder`] = 'Required';
-            if (!auto.monthly_payment.trim()) newErrors[`auto_${i}_payment`] = 'Required';
-            if (!auto.who_drives.trim()) newErrors[`auto_${i}_who_drives`] = 'Required';
-          });
-        }
-        break;
-      case 6:
-        formData.applicants.forEach((app, i) => {
-          if (!app.experian_score.trim()) newErrors[`applicant_${i}_score`] = 'Required';
-        });
-        if (!formData.deal_strengths.trim()) newErrors.deal_strengths = 'Required';
-        if (formData.has_derogatory_credit === null) newErrors.has_derogatory_credit = 'Required';
-        if (formData.has_derogatory_credit && !formData.derogatory_credit_explanation.trim()) {
-          newErrors.derogatory_explanation = 'Required';
-        }
-        break;
-    }
-
+    STEP_VALIDATORS[step]?.(formData, newErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -241,17 +253,19 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
     <div className="space-y-8">
       {/* Step indicator */}
       <nav className="flex items-center gap-2">
-        {FORM_STEPS.map((step) => (
+        {FORM_STEPS.map((step) => {
+          const stepBtnClass = step.id === currentStep
+            ? 'bg-brand-600 text-white'
+            : step.id < currentStep
+            ? 'bg-brand-100 text-brand-700 cursor-pointer'
+            : 'bg-surface-200 text-surface-500';
+          return (
           <div key={step.id} className="flex items-center gap-2 flex-1">
             <button
               onClick={() => { if (step.id < currentStep) setCurrentStep(step.id); }}
               className={cn(
                 'flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors flex-shrink-0',
-                step.id === currentStep
-                  ? 'bg-brand-600 text-white'
-                  : step.id < currentStep
-                  ? 'bg-brand-100 text-brand-700 cursor-pointer'
-                  : 'bg-surface-200 text-surface-500'
+                stepBtnClass
               )}
             >
               {step.id < currentStep ? (
@@ -273,7 +287,8 @@ export function DealFormWizard({ user }: DealFormWizardProps) {
               )} />
             )}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Step content */}
