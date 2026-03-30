@@ -12,7 +12,7 @@ interface BottleneckChartProps {
 /**
  * Horizontal bar chart showing average time per deal phase for completed deals.
  */
-export function BottleneckChart({ data }: BottleneckChartProps) {
+export function BottleneckChart({ data }: Readonly<BottleneckChartProps>) {
   if (data.every(d => d.avgHours === 0)) {
     return <p className="text-sm text-surface-500 py-4">No completed deal data available.</p>;
   }

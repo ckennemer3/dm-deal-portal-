@@ -27,7 +27,7 @@ const DATE_PRESETS = [
  * Compact horizontal filter bar for reporting. Pushes URL search params
  * via router.push() for server-side filtering.
  */
-export function ReportFilters({ filterOptions, effectiveRole }: ReportFiltersProps) {
+export function ReportFilters({ filterOptions, effectiveRole }: Readonly<ReportFiltersProps>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [expanded, setExpanded] = useState(false);
@@ -201,12 +201,12 @@ export function ReportFilters({ filterOptions, effectiveRole }: ReportFiltersPro
 }
 
 /** Minimal inline select for the filter bar */
-function CompactSelect({ label, options, value, onChange }: {
+function CompactSelect({ label, options, value, onChange }: Readonly<{
   label: string;
   options: { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
-}) {
+}>) {
   return (
     <div className="flex flex-col">
       <span className="text-[10px] uppercase tracking-wider text-surface-400 font-medium mb-0.5">{label}</span>

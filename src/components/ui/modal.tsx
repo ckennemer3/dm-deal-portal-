@@ -19,7 +19,7 @@ const sizeClasses = {
   xl: 'max-w-4xl',
 };
 
-export function Modal({ isOpen, onClose, title, children, size = 'md', footer }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = 'md', footer }: Readonly<ModalProps>) {
   const overlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

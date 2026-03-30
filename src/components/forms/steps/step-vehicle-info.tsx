@@ -12,7 +12,7 @@ interface StepProps {
   errors: Record<string, string>;
 }
 
-export function StepVehicleInfo({ formData, updateFormData, errors }: StepProps) {
+export function StepVehicleInfo({ formData, updateFormData, errors }: Readonly<StepProps>) {
   const dealType = formData.deal_type;
   const conditionOptions = getVehicleConditionOptions(dealType as any);
   const autoSelected = isVehicleConditionAutoSelected(dealType as any);
@@ -137,7 +137,7 @@ export function StepVehicleInfo({ formData, updateFormData, errors }: StepProps)
   );
 }
 
-function LTVRow({ label, value }: { label: string; value: number | null }) {
+function LTVRow({ label, value }: Readonly<{ label: string; value: number | null }>) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-surface-600">{label}</span>

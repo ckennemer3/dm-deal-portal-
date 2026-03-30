@@ -10,7 +10,7 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, options, placeholder, id, ...props }, ref) => {
-    const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const selectId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
     return (
       <div className="w-full">
         {label && (

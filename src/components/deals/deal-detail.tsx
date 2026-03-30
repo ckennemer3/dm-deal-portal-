@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserWithRelations, DealStatus, KickbackReason, AuditActionType, DocumentType } from '@/lib/types';
+import { UserWithRelations, KickbackReason, AuditActionType, DocumentType } from '@/lib/types';
 import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -446,7 +446,7 @@ function useDealDocuments(dealId: string, router: ReturnType<typeof useRouter>) 
 function determineKickbackBannerMode(
   deal: any,
   userId: string,
-  latestKickback: any | null,
+  latestKickback: any,
   userLastViewedAt?: string | null,
 ): KickbackBannerMode {
   if (!latestKickback) return false;

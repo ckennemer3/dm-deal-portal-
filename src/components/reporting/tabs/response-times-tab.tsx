@@ -51,7 +51,7 @@ const agentRTColumns: SortableColumn<PersonResponseRow>[] = [
 /**
  * Response Times tab: KPIs, manager/UW/agent ranking tables, bottleneck chart.
  */
-export function ResponseTimesTab({ data, effectiveRole }: ResponseTimesTabProps) {
+export function ResponseTimesTab({ data, effectiveRole }: Readonly<ResponseTimesTabProps>) {
   const { responseTimeKPIs: kpis, managerResponseTimes, underwriterResponseTimes, agentResponseTimes, bottleneck } = data;
   const showUW = canViewUWInternals(effectiveRole);
 
@@ -61,27 +61,27 @@ export function ResponseTimesTab({ data, effectiveRole }: ResponseTimesTabProps)
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <KPICard
           label="Pending \u2192 UW"
-          value={kpis.avgPendingToUW !== null ? `${kpis.avgPendingToUW}h` : '\u2014'}
+          value={kpis.avgPendingToUW === null ? '\u2014' : `${kpis.avgPendingToUW}h`}
           subtitle="Avg manager review"
         />
         <KPICard
           label="UW \u2192 Lender"
-          value={kpis.avgUWToLender !== null ? `${kpis.avgUWToLender}h` : '\u2014'}
+          value={kpis.avgUWToLender === null ? '\u2014' : `${kpis.avgUWToLender}h`}
           subtitle="Avg UW processing"
         />
         <KPICard
           label="Lender \u2192 Approved"
-          value={kpis.avgLenderToApproved !== null ? `${kpis.avgLenderToApproved}h` : '\u2014'}
+          value={kpis.avgLenderToApproved === null ? '\u2014' : `${kpis.avgLenderToApproved}h`}
           subtitle="Avg lender decision"
         />
         <KPICard
           label="Approved \u2192 Delivered"
-          value={kpis.avgApprovedToDelivered !== null ? `${kpis.avgApprovedToDelivered}h` : '\u2014'}
+          value={kpis.avgApprovedToDelivered === null ? '\u2014' : `${kpis.avgApprovedToDelivered}h`}
           subtitle="Avg closing"
         />
         <KPICard
           label="Total Lifecycle"
-          value={kpis.avgTotalLifecycle !== null ? `${kpis.avgTotalLifecycle}h` : '\u2014'}
+          value={kpis.avgTotalLifecycle === null ? '\u2014' : `${kpis.avgTotalLifecycle}h`}
           subtitle="Avg end-to-end"
         />
       </div>

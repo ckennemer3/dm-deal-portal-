@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, UserWithRelations } from '@/lib/types';
+import { UserWithRelations } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 
 export function useAuth() {

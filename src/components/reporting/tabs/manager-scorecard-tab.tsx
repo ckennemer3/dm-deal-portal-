@@ -70,7 +70,7 @@ const managerColumns: SortableColumn<ManagerScorecardRow>[] = [
 /**
  * Manager Scorecard tab: KPIs, ranking table, kickback reason breakdown.
  */
-export function ManagerScorecardTab({ data }: ManagerScorecardTabProps) {
+export function ManagerScorecardTab({ data }: Readonly<ManagerScorecardTabProps>) {
   const { managerScorecard: managers, kickbackReasonBreakdown: reasons } = data;
 
   // Aggregate KPIs across all managers
@@ -79,7 +79,7 @@ export function ManagerScorecardTab({ data }: ManagerScorecardTabProps) {
     const totalDeals = managers.reduce((s, m) => s + m.totalDeals, 0);
     const totalKB = managers.reduce((s, m) => s + m.kickbackCount, 0);
     const avgKBRate = totalDeals > 0 ? +((totalKB / totalDeals) * 100).toFixed(1) : 0;
-    const avgReviewTime = managers.filter(m => m.avgReviewHours > 0).length > 0
+    const avgReviewTime = managers.some(m => m.avgReviewHours > 0)
       ? +(managers.reduce((s, m) => s + m.avgReviewHours, 0) / managers.filter(m => m.avgReviewHours > 0).length).toFixed(1)
       : 0;
     const dealsWithKB = managers.filter(m => m.kickbackCount > 0);

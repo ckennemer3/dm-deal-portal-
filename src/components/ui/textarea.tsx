@@ -8,7 +8,7 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, id, ...props }, ref) => {
-    const textareaId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const textareaId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
     return (
       <div className="w-full">
         {label && (

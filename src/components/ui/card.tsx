@@ -15,7 +15,7 @@ const paddingClasses = {
   lg: 'p-8',
 };
 
-export function Card({ children, className, hover = false, padding = 'md' }: CardProps) {
+export function Card({ children, className, hover = false, padding = 'md' }: Readonly<CardProps>) {
   return (
     <div className={cn(hover ? 'card-hover' : 'card', paddingClasses[padding], className)}>
       {children}
@@ -30,7 +30,7 @@ interface CardHeaderProps {
   className?: string;
 }
 
-export function CardHeader({ title, description, action, className }: CardHeaderProps) {
+export function CardHeader({ title, description, action, className }: Readonly<CardHeaderProps>) {
   return (
     <div className={cn('flex items-start justify-between', className)}>
       <div>

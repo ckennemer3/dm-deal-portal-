@@ -62,12 +62,12 @@ export function ReportingDashboard({
   activeTab,
   userId,
   userRole,
-}: ReportingDashboardProps) {
+}: Readonly<ReportingDashboardProps>) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const tabs = getVisibleTabs(effectiveRole);
-  const currentTab = tabs.find(t => t.id === activeTab) ? activeTab : tabs[0]?.id || 'overview';
+  const currentTab = tabs.some(t => t.id === activeTab) ? activeTab : tabs[0]?.id || 'overview';
 
   const handleTabChange = useCallback((tabId: string) => {
     const params = new URLSearchParams(searchParams.toString());

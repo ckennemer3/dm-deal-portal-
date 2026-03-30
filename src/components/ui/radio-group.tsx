@@ -28,7 +28,7 @@ export function RadioGroup({
   error,
   required,
   direction = 'horizontal',
-}: RadioGroupProps) {
+}: Readonly<RadioGroupProps>) {
   return (
     <fieldset className="w-full">
       {label && (

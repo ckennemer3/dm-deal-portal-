@@ -16,7 +16,7 @@ const variantClasses = {
   info: 'bg-brand-100 text-brand-800',
 };
 
-export function Badge({ children, variant = 'default', className }: BadgeProps) {
+export function Badge({ children, variant = 'default', className }: Readonly<BadgeProps>) {
   return (
     <span className={cn('badge', variantClasses[variant], className)}>
       {children}
@@ -24,7 +24,7 @@ export function Badge({ children, variant = 'default', className }: BadgeProps) 
   );
 }
 
-export function StatusBadge({ status, className }: { status: DealStatus; className?: string }) {
+export function StatusBadge({ status, className }: Readonly<{ status: DealStatus; className?: string }>) {
   const config = DEAL_STATUS_CONFIG[status];
   return (
     <span className={cn('badge', config.bgColor, config.color, className)}>

@@ -25,14 +25,14 @@ const approvalColumns: SortableColumn<ApprovalBucket>[] = [
   { key: 'total', label: 'Submitted', align: 'right' },
   { key: 'approved', label: 'Approved', align: 'right' },
   { key: 'rate', label: 'Rate', align: 'right', format: (v) => `${v}%`, quartile: true, lowerIsBetter: false },
-  { key: 'avgDays', label: 'Avg Days', align: 'right', format: (v) => v !== null ? `${v}d` : '\u2014' },
+  { key: 'avgDays', label: 'Avg Days', align: 'right', format: (v) => v === null ? '\u2014' : `${v}d` },
 ];
 
 /**
  * Approval Metrics tab: approval rates by credit score, LTV, deal type.
  * Efficiency matrix (credit x LTV heatmap). Term length analysis.
  */
-export function ApprovalMetricsTab({ data }: ApprovalMetricsTabProps) {
+export function ApprovalMetricsTab({ data }: Readonly<ApprovalMetricsTabProps>) {
   const { approvalByCredit, approvalByLTV, approvalByDealType, deals } = data;
 
   // Efficiency matrix: credit score rows x LTV columns → avg days

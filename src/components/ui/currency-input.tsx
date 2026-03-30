@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, forwardRef, InputHTMLAttributes, useCallback } from 'react';
-import { cn } from '@/lib/utils';
-import { parseCurrencyInput } from '@/lib/utils';
+import { cn, parseCurrencyInput } from '@/lib/utils';
 
 interface CurrencyInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   label?: string;
@@ -13,11 +12,11 @@ interface CurrencyInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
 
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ label, error, value, onChange, id, className, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const inputId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
     const [displayValue, setDisplayValue] = useState(value);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = e.target.value.replace(/[^0-9.]/g, '');
+      const raw = e.target.value.replaceAll(/[^0-9.]/g, '');
       setDisplayValue(raw);
       onChange(raw);
     }, [onChange]);

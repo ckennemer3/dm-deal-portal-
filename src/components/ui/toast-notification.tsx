@@ -13,7 +13,7 @@ interface ToastNotificationProps {
  * A single toast notification that auto-dismisses after 8 seconds.
  * Clicking navigates to the associated deal.
  */
-function ToastNotification({ notification, onDismiss }: ToastNotificationProps) {
+function ToastNotification({ notification, onDismiss }: Readonly<ToastNotificationProps>) {
   const router = useRouter();
 
   useEffect(() => {
@@ -69,7 +69,7 @@ interface ToastContainerProps {
 /**
  * Fixed-position container for toast notifications at the bottom-right of the viewport.
  */
-export function ToastContainer({ notification, onDismiss }: ToastContainerProps) {
+export function ToastContainer({ notification, onDismiss }: Readonly<ToastContainerProps>) {
   const [toasts, setToasts] = useState<InAppNotification[]>([]);
 
   useEffect(() => {

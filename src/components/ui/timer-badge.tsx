@@ -27,7 +27,7 @@ const urgencyStyles = {
   },
 };
 
-export function TimerBadge({ startTime, thresholds, running = true, showLabel = false, size = 'sm' }: TimerBadgeProps) {
+export function TimerBadge({ startTime, thresholds, running = true, showLabel = false, size = 'sm' }: Readonly<TimerBadgeProps>) {
   const { display, urgency } = useTimer(startTime, thresholds, running);
   const styles = urgencyStyles[urgency];
 

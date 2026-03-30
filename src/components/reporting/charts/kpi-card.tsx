@@ -13,7 +13,7 @@ interface KPICardProps {
 /**
  * Reusable KPI display card for reporting dashboards.
  */
-export function KPICard({ label, value, subtitle, trend, className }: KPICardProps) {
+export function KPICard({ label, value, subtitle, trend, className }: Readonly<KPICardProps>) {
   return (
     <div className={cn('rounded-lg border border-surface-200 bg-white p-4 shadow-sm', className)}>
       <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{label}</p>

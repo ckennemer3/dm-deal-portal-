@@ -28,14 +28,14 @@ interface OverviewTabProps {
 /**
  * Overview tab: KPI cards, deals by status/type/office, pipeline aging, top agents/managers.
  */
-export function OverviewTab({ data }: OverviewTabProps) {
+export function OverviewTab({ data }: Readonly<OverviewTabProps>) {
   const { overviewKPIs: kpis, deals, users, offices } = data;
 
   const statusChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     deals.forEach((d: any) => { counts[d.status] = (counts[d.status] || 0) + 1; });
     return Object.entries(counts)
-      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .sort(([, a], [, b]) => b - a)
       .map(([status, count]) => ({
         name: DEAL_STATUS_CONFIG[status as DealStatus]?.label || status,
         value: count,
@@ -118,11 +118,11 @@ export function OverviewTab({ data }: OverviewTabProps) {
         <KPICard label="Completed" value={kpis.completed} />
         <KPICard
           label="Avg Days to Complete"
-          value={kpis.avgDaysToCompletion !== null ? `${kpis.avgDaysToCompletion}d` : '\u2014'}
+          value={kpis.avgDaysToCompletion === null ? '\u2014' : `${kpis.avgDaysToCompletion}d`}
         />
         <KPICard
           label="1st-Time Approval"
-          value={kpis.firstTimeApprovalRate !== null ? `${kpis.firstTimeApprovalRate}%` : '\u2014'}
+          value={kpis.firstTimeApprovalRate === null ? '\u2014' : `${kpis.firstTimeApprovalRate}%`}
         />
         <KPICard label="Kickback Rate" value={`${kpis.kickbackRate}%`} />
       </div>

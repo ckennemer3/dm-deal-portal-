@@ -3,10 +3,9 @@
 import { KPICard } from '../charts/kpi-card';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { UserRole } from '@/lib/types';
+import { UserRole, DealStatus } from '@/lib/types';
 import { DEAL_STATUS_CONFIG, ROLE_LABELS } from '@/lib/constants';
-import type { MyMetricsData, MonthlyVolume } from '@/lib/reporting-queries';
-import { DealStatus } from '@/lib/types';
+import type { MyMetricsData } from '@/lib/reporting-queries';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -27,7 +26,7 @@ interface MyMetricsTabProps {
  * Underwriter: total processed, avg time to submit to lender, queue depth, trend.
  * Executive/Admin: summary redirecting to other tabs.
  */
-export function MyMetricsTab({ data, userRole }: MyMetricsTabProps) {
+export function MyMetricsTab({ data, userRole }: Readonly<MyMetricsTabProps>) {
   const { myMetrics: metrics } = data;
 
   const roleLabel = ROLE_LABELS[userRole] || userRole;

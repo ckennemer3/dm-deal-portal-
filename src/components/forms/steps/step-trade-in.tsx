@@ -12,7 +12,7 @@ interface StepProps {
   errors: Record<string, string>;
 }
 
-export function StepTradeIn({ formData, updateFormData, errors }: StepProps) {
+export function StepTradeIn({ formData, updateFormData, errors }: Readonly<StepProps>) {
   const updateTradeIn = (field: string, value: string) => {
     updateFormData({ trade_in: { ...formData.trade_in, [field]: value } });
   };

@@ -31,7 +31,7 @@ const urgencyBgStyles = {
  * Prominent timer display for deal age and action request timing.
  * Used in table cells (sm) and detail headers (lg).
  */
-export function DealAgeTimer({ startTime, label, size = 'sm', thresholds }: DealAgeTimerProps) {
+export function DealAgeTimer({ startTime, label, size = 'sm', thresholds }: Readonly<DealAgeTimerProps>) {
   // Use very generous thresholds if none provided (essentially always green)
   const defaultThresholds: TimerThreshold = thresholds || { green_max_hours: 9999, yellow_max_hours: 99999 };
   const { display, urgency } = useTimer(startTime, defaultThresholds);

@@ -13,7 +13,7 @@ interface StepProps {
   errors: Record<string, string>;
 }
 
-export function StepOpenAutos({ formData, updateFormData, errors }: StepProps) {
+export function StepOpenAutos({ formData, updateFormData, errors }: Readonly<StepProps>) {
   const updateAuto = (index: number, field: string, value: string) => {
     const updated = [...formData.open_autos];
     updated[index] = { ...updated[index], [field]: value };

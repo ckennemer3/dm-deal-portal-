@@ -28,7 +28,7 @@ export function FileUpload({
   onReplace,
   canReplace = true,
   error,
-}: FileUploadProps) {
+}: Readonly<FileUploadProps>) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);

@@ -12,7 +12,7 @@ interface RoleSwitcherContextType {
 
 const RoleSwitcherContext = createContext<RoleSwitcherContextType | undefined>(undefined);
 
-export function RoleSwitcherProvider({ children, actualRole }: { children: ReactNode; actualRole: UserRole }) {
+export function RoleSwitcherProvider({ children, actualRole }: Readonly<{ children: ReactNode; actualRole: UserRole }>) {
   const [viewAsRole, setViewAsRoleState] = useState<UserRole | null>(null);
 
   const setViewAsRole = (role: UserRole | null) => {

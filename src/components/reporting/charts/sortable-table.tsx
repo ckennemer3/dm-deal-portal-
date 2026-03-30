@@ -71,7 +71,7 @@ export function SortableTable<T extends Record<string, any>>({
   defaultSortDir = 'desc',
   exportable = true,
   exportFilename = 'export',
-}: SortableTableProps<T>) {
+}: Readonly<SortableTableProps<T>>) {
   const [sortKey, setSortKey] = useState<string>(defaultSort || columns[0]?.key || '');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(defaultSortDir);
 

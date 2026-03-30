@@ -26,7 +26,7 @@ interface VolumeTabProps {
  * Volume & Throughput tab: KPIs, monthly chart, volume by office/manager/UW,
  * throughput table, capacity planning.
  */
-export function VolumeTab({ data, effectiveRole }: VolumeTabProps) {
+export function VolumeTab({ data, effectiveRole }: Readonly<VolumeTabProps>) {
   const { monthlyVolume, volumeByOffice, volumeByManager, volumeByUnderwriter, deals } = data;
   const showUW = canViewUWInternals(effectiveRole);
 
