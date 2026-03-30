@@ -29,7 +29,7 @@ interface LogEntry {
 }
 
 class Logger {
-  private isDev = process.env.NODE_ENV === 'development';
+  private readonly isDev = process.env.NODE_ENV === 'development';
 
   private format(entry: LogEntry): string {
     if (this.isDev) {

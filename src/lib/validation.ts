@@ -5,7 +5,7 @@ import { z } from 'zod';
 const uuidSchema = z.string().uuid('Must be a valid UUID');
 
 const numericStringSchema = (min?: number, max?: number) => {
-  let schema = z.string().refine((val) => !isNaN(Number(val)), {
+  let schema = z.string().refine((val) => !Number.isNaN(Number(val)), {
     message: 'Must be a valid number',
   });
   if (min !== undefined) {
@@ -93,7 +93,7 @@ export const submitDealSchema = z.object({
   total_amount_financed: z.string().optional(),
 
   term: z.string().optional().refine(
-    (val) => !val || (!isNaN(Number(val)) && Number(val) > 0 && Number.isInteger(Number(val))),
+    (val) => !val || (!Number.isNaN(Number(val)) && Number(val) > 0 && Number.isInteger(Number(val))),
     { message: 'Term must be a positive whole number' }
   ),
   monthly_payment: numericStringSchema(0.01),

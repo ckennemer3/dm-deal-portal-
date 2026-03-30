@@ -19,12 +19,12 @@ export function StepVehicleInfo({ formData, updateFormData, errors }: StepProps)
   const condition = autoSelected ? (getAutoSelectedVehicleCondition(dealType as any) || '') : formData.vehicle_condition;
 
   // LTV calculations
-  const msrp = parseFloat(formData.msrp) || null;
-  const invoice = parseFloat(formData.invoice) || null;
-  const jdRetail = parseFloat(formData.jd_power_retail) || null;
-  const jdWholesale = parseFloat(formData.jd_power_wholesale) || null;
-  const netCapCost = parseFloat(formData.net_cap_cost) || null;
-  const totalFinanced = parseFloat(formData.total_amount_financed) || null;
+  const msrp = Number.parseFloat(formData.msrp) || null;
+  const invoice = Number.parseFloat(formData.invoice) || null;
+  const jdRetail = Number.parseFloat(formData.jd_power_retail) || null;
+  const jdWholesale = Number.parseFloat(formData.jd_power_wholesale) || null;
+  const netCapCost = Number.parseFloat(formData.net_cap_cost) || null;
+  const totalFinanced = Number.parseFloat(formData.total_amount_financed) || null;
 
   const numerator = showNetCapCost(dealType) ? netCapCost : totalFinanced;
 
@@ -36,7 +36,10 @@ export function StepVehicleInfo({ formData, updateFormData, errors }: StepProps)
           label="Vehicle Condition"
           name="vehicle_condition"
           required
-          options={conditionOptions.map(c => ({ value: c, label: c === 'new' ? 'New' : c === 'used' ? 'Used' : 'Untitled Demo' }))}
+          options={conditionOptions.map(c => {
+            const conditionLabel = c === 'new' ? 'New' : c === 'used' ? 'Used' : 'Untitled Demo';
+            return { value: c, label: conditionLabel };
+          })}
           value={formData.vehicle_condition}
           onChange={(value) => updateFormData({ vehicle_condition: value as VehicleCondition })}
           error={errors.vehicle_condition}

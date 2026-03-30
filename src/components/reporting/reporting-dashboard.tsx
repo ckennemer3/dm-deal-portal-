@@ -88,7 +88,7 @@ export function ReportingDashboard({
         <ReportFilters filterOptions={filterOptions} effectiveRole={effectiveRole} />
 
         {/* Tab navigation */}
-        <nav className="flex gap-1 mt-3 overflow-x-auto" role="tablist">
+        <div className="flex gap-1 mt-3 overflow-x-auto" role="tablist">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -105,7 +105,7 @@ export function ReportingDashboard({
               {tab.label}
             </button>
           ))}
-        </nav>
+        </div>
       </div>
 
       {/* Tab content */}

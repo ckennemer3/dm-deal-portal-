@@ -62,8 +62,6 @@ export function ReportFilters({ filterOptions, effectiveRole }: ReportFiltersPro
   const currentDealType = searchParams.get('dealType') || '';
   const currentCreditRange = searchParams.get('creditScoreRange') || '';
   const currentLTVRange = searchParams.get('ltvRange') || '';
-  const currentDateFrom = searchParams.get('dateFrom') || '';
-  const currentDateTo = searchParams.get('dateTo') || '';
 
   const showAllOffice = canViewAllOfficeReporting(effectiveRole);
   const showUW = canViewUWInternals(effectiveRole);

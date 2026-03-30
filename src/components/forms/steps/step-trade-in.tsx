@@ -17,6 +17,8 @@ export function StepTradeIn({ formData, updateFormData, errors }: StepProps) {
     updateFormData({ trade_in: { ...formData.trade_in, [field]: value } });
   };
 
+  const hasTradeInValue = formData.has_trade_in === null ? '' : formData.has_trade_in ? 'yes' : 'no';
+
   return (
     <div className="space-y-6">
       <RadioGroup
@@ -27,7 +29,7 @@ export function StepTradeIn({ formData, updateFormData, errors }: StepProps) {
           { value: 'yes', label: 'Yes' },
           { value: 'no', label: 'No' },
         ]}
-        value={formData.has_trade_in === null ? '' : formData.has_trade_in ? 'yes' : 'no'}
+        value={hasTradeInValue}
         onChange={(value) => updateFormData({ has_trade_in: value === 'yes' })}
         error={errors.has_trade_in}
       />

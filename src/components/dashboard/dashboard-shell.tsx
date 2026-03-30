@@ -125,12 +125,11 @@ function DashboardShellContent({ user, children, effectiveRole, isViewingAs, onR
     <div className="min-h-screen bg-surface-100">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden cursor-default"
+          aria-label="Close sidebar"
           onClick={() => setSidebarOpen(false)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSidebarOpen(false); }}
         />
       )}
 

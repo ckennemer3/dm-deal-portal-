@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useMemo, useState, ReactNode } from 'react';
 import { UserRole } from '@/lib/types';
 
 interface RoleSwitcherContextType {
@@ -19,13 +19,16 @@ export function RoleSwitcherProvider({ children, actualRole }: { children: React
     setViewAsRoleState(role === actualRole ? null : role);
   };
 
+  const contextValue = useMemo(() => ({
+    effectiveRole: viewAsRole ?? actualRole,
+    isViewingAs: viewAsRole !== null && viewAsRole !== actualRole,
+    setViewAsRole,
+    actualRole,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [viewAsRole, actualRole]);
+
   return (
-    <RoleSwitcherContext.Provider value={{
-      effectiveRole: viewAsRole ?? actualRole,
-      isViewingAs: viewAsRole !== null && viewAsRole !== actualRole,
-      setViewAsRole,
-      actualRole,
-    }}>
+    <RoleSwitcherContext.Provider value={contextValue}>
       {children}
     </RoleSwitcherContext.Provider>
   );

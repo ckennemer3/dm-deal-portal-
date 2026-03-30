@@ -20,8 +20,8 @@ export function formatCurrency(value: number | null | undefined): string {
 
 export function parseCurrencyInput(value: string): number | null {
   const cleaned = value.replace(/[^0-9.]/g, '');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? null : parsed;
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isNaN(parsed) ? null : parsed;
 }
 
 export function formatCurrencyInput(value: string): string {

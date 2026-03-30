@@ -27,7 +27,7 @@ interface VolumeTabProps {
  * throughput table, capacity planning.
  */
 export function VolumeTab({ data, effectiveRole }: VolumeTabProps) {
-  const { monthlyVolume, volumeByOffice, volumeByManager, volumeByUnderwriter, deals, users } = data;
+  const { monthlyVolume, volumeByOffice, volumeByManager, volumeByUnderwriter, deals } = data;
   const showUW = canViewUWInternals(effectiveRole);
 
   const totalSubmissions = deals.length;
@@ -37,8 +37,7 @@ export function VolumeTab({ data, effectiveRole }: VolumeTabProps) {
 
   // Throughput table from monthly data
   const throughput = useMemo(() => {
-    return monthlyVolume.map((mv, i) => {
-      const prev = i > 0 ? monthlyVolume[i - 1] : null;
+    return monthlyVolume.map((mv) => {
       const netChange = mv.submissions - mv.completions;
       return {
         ...mv,
@@ -180,7 +179,7 @@ export function VolumeTab({ data, effectiveRole }: VolumeTabProps) {
                   <td className="px-3 py-2 font-medium text-surface-700">{row.month}</td>
                   <td className="px-3 py-2 text-right">{row.submissions}</td>
                   <td className="px-3 py-2 text-right text-emerald-600">{row.completions}</td>
-                  <td className={`px-3 py-2 text-right font-medium ${row.netChange > 0 ? 'text-red-600' : row.netChange < 0 ? 'text-emerald-600' : 'text-surface-500'}`}>
+                  <td className={`px-3 py-2 text-right font-medium ${row.netChange > 0 ? 'text-red-600' : (row.netChange < 0 ? 'text-emerald-600' : 'text-surface-500')}`}>
                     {row.netChange > 0 ? '+' : ''}{row.netChange}
                   </td>
                 </tr>

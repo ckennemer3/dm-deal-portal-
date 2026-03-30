@@ -966,11 +966,14 @@ export interface FilterOptions {
 export function buildFilterOptions(users: any[], offices: any[], teams: any[]): FilterOptions {
   return {
     offices: offices.map((o: any) => ({ value: o.id, label: o.name })),
-    teams: teams.map((t: any) => ({
-      value: t.id,
-      label: `${t.name}${t.office?.name ? ` (${t.office.name})` : ''}`,
-      officeId: t.office_id,
-    })),
+    teams: teams.map((t: any) => {
+      const officeSuffix = t.office?.name ? ` (${t.office.name})` : '';
+      return {
+        value: t.id,
+        label: `${t.name}${officeSuffix}`,
+        officeId: t.office_id,
+      };
+    }),
     managers: users
       .filter((u: any) => (u.role === 'manager' || u.role === 'general_manager') && u.is_active)
       .map((u: any) => ({ value: u.id, label: getFullName(u.first_name, u.last_name) }))

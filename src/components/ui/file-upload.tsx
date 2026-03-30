@@ -99,13 +99,14 @@ export function FileUpload({
           )}
         </div>
       ) : (
-        <div
+        <button
+          type="button"
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            'flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors',
+            'w-full flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed cursor-pointer transition-colors',
             dragOver ? 'border-brand-500 bg-brand-50' : 'border-surface-300 hover:border-surface-400 hover:bg-surface-50',
             error && 'border-status-danger'
           )}
@@ -117,7 +118,7 @@ export function FileUpload({
             {uploading ? 'Uploading...' : 'Drop file here or click to upload'}
           </span>
           <span className="text-xs text-surface-400 mt-1">PDF, JPG, PNG, DOC</span>
-        </div>
+        </button>
       )}
 
       <input

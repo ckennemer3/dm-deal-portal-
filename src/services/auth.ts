@@ -19,7 +19,7 @@ export interface AuthServiceInterface {
 import { createClient } from '@/lib/supabase/client';
 
 export class SupabaseAuthService implements AuthServiceInterface {
-  private supabase = createClient();
+  private readonly supabase = createClient();
 
   async getCurrentUser(): Promise<UserWithRelations | null> {
     const { data: { user: authUser } } = await this.supabase.auth.getUser();
@@ -40,7 +40,7 @@ export class SupabaseAuthService implements AuthServiceInterface {
   }
 
   async signIn(email: string, password: string) {
-    const { data, error } = await this.supabase.auth.signInWithPassword({
+    const { error } = await this.supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -52,7 +52,7 @@ export class SupabaseAuthService implements AuthServiceInterface {
   }
 
   async signUp(email: string, password: string, metadata: { first_name: string; last_name: string }) {
-    const { data, error } = await this.supabase.auth.signUp({
+    const { error } = await this.supabase.auth.signUp({
       email,
       password,
       options: {

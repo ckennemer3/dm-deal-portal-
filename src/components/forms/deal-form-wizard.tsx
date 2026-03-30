@@ -254,11 +254,9 @@ export function DealFormWizard({ user }: Readonly<DealFormWizardProps>) {
       {/* Step indicator */}
       <nav className="flex items-center gap-2">
         {FORM_STEPS.map((step) => {
-          const stepBtnClass = step.id === currentStep
-            ? 'bg-brand-600 text-white'
-            : step.id < currentStep
-            ? 'bg-brand-100 text-brand-700 cursor-pointer'
-            : 'bg-surface-200 text-surface-500';
+          let stepBtnClass = 'bg-surface-200 text-surface-500';
+          if (step.id === currentStep) stepBtnClass = 'bg-brand-600 text-white';
+          else if (step.id < currentStep) stepBtnClass = 'bg-brand-100 text-brand-700 cursor-pointer';
           return (
           <div key={step.id} className="flex items-center gap-2 flex-1">
             <button

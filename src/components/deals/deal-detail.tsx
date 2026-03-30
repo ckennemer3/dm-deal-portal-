@@ -952,8 +952,9 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
                 <div className="space-y-2">
                 <div className="flex items-end gap-2">
                   <div className="flex-1">
-                    <label className="text-xs font-medium text-surface-500 mb-1 block">Document Type</label>
+                    <label htmlFor="upload-doc-type" className="text-xs font-medium text-surface-500 mb-1 block">Document Type</label>
                     <select
+                      id="upload-doc-type"
                       value={uploadDocType}
                       onChange={(e) => { setUploadDocType(e.target.value); setCustomDocLabel(''); }}
                       className="input text-sm py-1.5"
@@ -974,8 +975,9 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
                 </div>
                 {uploadDocType === 'other' && (
                   <div>
-                    <label className="text-xs font-medium text-surface-500 mb-1 block">Description (max 50 chars)</label>
+                    <label htmlFor="custom-doc-label" className="text-xs font-medium text-surface-500 mb-1 block">Description (max 50 chars)</label>
                     <input
+                      id="custom-doc-label"
                       type="text"
                       value={customDocLabel}
                       onChange={(e) => setCustomDocLabel(e.target.value.slice(0, 50))}
@@ -1084,10 +1086,11 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-surface-700 mb-1">
+            <label htmlFor="kickback-reason" className="block text-sm font-medium text-surface-700 mb-1">
               Reason <span className="text-status-danger">*</span>
             </label>
             <select
+              id="kickback-reason"
               value={kickbackReason}
               onChange={(e) => setKickbackReason(e.target.value as KickbackReason | '')}
               className="input text-sm w-full"

@@ -149,8 +149,8 @@ export function OverviewTab({ data }: OverviewTabProps) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={typeChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={(entry: any) => entry.name}>
-                  {typeChartData.map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  {typeChartData.map((entry, i) => (
+                    <Cell key={`type-cell-${entry.name}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -203,7 +203,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
               <p className="text-sm text-surface-500">No data available.</p>
             ) : (
               topAgents.map((agent, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5">
+                <div key={`agent-${agent.name}`} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-surface-400 w-5">{i + 1}.</span>
                     <span className="text-sm text-surface-900">{agent.name}</span>
@@ -222,7 +222,7 @@ export function OverviewTab({ data }: OverviewTabProps) {
               <p className="text-sm text-surface-500">No data available.</p>
             ) : (
               topManagers.map((mgr, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5">
+                <div key={`mgr-${mgr.name}`} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-surface-400 w-5">{i + 1}.</span>
                     <span className="text-sm text-surface-900">{mgr.name}</span>

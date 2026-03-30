@@ -20,6 +20,8 @@ export function StepOpenAutos({ formData, updateFormData, errors }: StepProps) {
     updateFormData({ open_autos: updated });
   };
 
+  const hasOpenAutosValue = formData.has_open_autos === null ? '' : formData.has_open_autos ? 'yes' : 'no';
+
   return (
     <div className="space-y-6">
       <RadioGroup
@@ -30,7 +32,7 @@ export function StepOpenAutos({ formData, updateFormData, errors }: StepProps) {
           { value: 'yes', label: 'Yes' },
           { value: 'no', label: 'No' },
         ]}
-        value={formData.has_open_autos === null ? '' : formData.has_open_autos ? 'yes' : 'no'}
+        value={hasOpenAutosValue}
         onChange={(value) => updateFormData({ has_open_autos: value === 'yes' })}
         error={errors.has_open_autos}
       />
@@ -41,12 +43,12 @@ export function StepOpenAutos({ formData, updateFormData, errors }: StepProps) {
             label="How many other open autos?"
             options={Array.from({ length: 10 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) }))}
             value={String(formData.num_open_autos)}
-            onChange={(e) => updateFormData({ num_open_autos: parseInt(e.target.value) })}
+            onChange={(e) => updateFormData({ num_open_autos: Number.parseInt(e.target.value) })}
             className="max-w-[200px]"
           />
 
           {formData.open_autos.map((auto, i) => (
-            <Card key={i} padding="md" className="space-y-4">
+            <Card key={`open-auto-${i}`} padding="md" className="space-y-4">
               <h4 className="font-medium text-surface-900">Open Auto {i + 1}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Lienholder" required value={auto.lienholder}

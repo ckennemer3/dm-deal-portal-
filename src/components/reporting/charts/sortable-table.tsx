@@ -151,7 +151,7 @@ export function SortableTable<T extends Record<string, any>>({
                   onClick={() => handleSort(col.key)}
                   className={cn(
                     'px-3 py-2 text-xs font-semibold uppercase tracking-wider text-surface-500 cursor-pointer hover:text-surface-700 select-none whitespace-nowrap',
-                    col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'
+                    col.align === 'right' ? 'text-right' : (col.align === 'center' ? 'text-center' : 'text-left')
                   )}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -166,7 +166,7 @@ export function SortableTable<T extends Record<string, any>>({
           </thead>
           <tbody className="divide-y divide-surface-100">
             {sortedData.map((row, i) => (
-              <tr key={i} className={cn(i % 2 === 1 && 'bg-surface-25', 'hover:bg-surface-50 transition-colors')}>
+              <tr key={`row-${i}`} className={cn(i % 2 === 1 && 'bg-surface-25', 'hover:bg-surface-50 transition-colors')}>
                 {columns.map(col => {
                   const val = row[col.key];
                   const display = col.format ? col.format(val) : String(val ?? '—');
@@ -175,12 +175,13 @@ export function SortableTable<T extends Record<string, any>>({
                     const q = classifyQuartile(Number(val) || 0, quartileValues[col.key], !!col.lowerIsBetter);
                     cellClass = QUARTILE_COLORS[q];
                   }
+                  const alignClass = col.align === 'right' ? 'text-right' : (col.align === 'center' ? 'text-center' : 'text-left');
                   return (
                     <td
                       key={col.key}
                       className={cn(
                         'px-3 py-2 whitespace-nowrap',
-                        col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
+                        alignClass,
                         cellClass
                       )}
                     >

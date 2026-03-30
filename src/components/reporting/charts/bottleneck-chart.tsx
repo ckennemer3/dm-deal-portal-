@@ -35,8 +35,8 @@ export function BottleneckChart({ data }: BottleneckChartProps) {
           />
           <Tooltip formatter={(v) => `${v}h`} />
           <Bar dataKey="avgHours" radius={[0, 4, 4, 0]} name="Avg Hours">
-            {data.map((entry, i) => (
-              <Cell key={i} fill={entry.color} />
+            {data.map((entry) => (
+              <Cell key={`bottleneck-cell-${entry.phase}`} fill={entry.color} />
             ))}
           </Bar>
         </BarChart>

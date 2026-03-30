@@ -61,14 +61,14 @@ export function MyMetricsTab({ data, userRole }: MyMetricsTabProps) {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPICard
-          label={userRole === 'agent' ? 'Total Submitted' : userRole === 'underwriter' ? 'Total Processed' : 'Total Reviewed'}
+          label={userRole === 'agent' ? 'Total Submitted' : (userRole === 'underwriter' ? 'Total Processed' : 'Total Reviewed')}
           value={metrics.totalDeals}
         />
         {(userRole === 'agent' || userRole === 'manager' || userRole === 'general_manager') && (
           <KPICard label="Kickback Rate" value={`${metrics.kickbackRate}%`} />
         )}
         <KPICard
-          label={userRole === 'agent' ? 'Avg KB Response' : userRole === 'underwriter' ? 'Avg Processing' : 'Avg Review Time'}
+          label={userRole === 'agent' ? 'Avg KB Response' : (userRole === 'underwriter' ? 'Avg Processing' : 'Avg Review Time')}
           value={metrics.avgResponseHours > 0 ? `${metrics.avgResponseHours}h` : '\u2014'}
         />
         {userRole === 'agent' && metrics.totalDeals > 0 && (

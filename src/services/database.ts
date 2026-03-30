@@ -4,7 +4,7 @@
 import { createClient } from '@/lib/supabase/client';
 
 export class DatabaseService {
-  private supabase = createClient();
+  private readonly supabase = createClient();
 
   // Generic query helper
   async query<T>(table: string, options?: {

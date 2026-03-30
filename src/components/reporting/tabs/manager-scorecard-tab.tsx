@@ -144,8 +144,8 @@ export function ManagerScorecardTab({ data }: ManagerScorecardTabProps) {
             {reasons.length === 0 ? (
               <p className="text-sm text-surface-500">No kickback data.</p>
             ) : (
-              reasons.map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5 border-b border-surface-50 last:border-0">
+              reasons.map((item) => (
+                <div key={`reason-${item.reason}`} className="flex items-center justify-between py-1.5 border-b border-surface-50 last:border-0">
                   <span className="text-sm text-surface-700">{item.reason}</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-surface-900">{item.count}</span>

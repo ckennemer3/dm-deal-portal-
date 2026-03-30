@@ -12,7 +12,7 @@ export interface StorageServiceInterface {
 import { createClient } from '@/lib/supabase/client';
 
 export class SupabaseStorageService implements StorageServiceInterface {
-  private supabase = createClient();
+  private readonly supabase = createClient();
 
   async upload(bucket: string, path: string, file: File) {
     const { data, error } = await this.supabase.storage

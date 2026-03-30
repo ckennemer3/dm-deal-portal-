@@ -43,12 +43,15 @@ export function Modal({ isOpen, onClose, title, children, size = 'md', footer }:
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in"
-      onClick={(e) => {
-        if (e.target === overlayRef.current) onClose();
-      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
     >
-      <div className={cn('bg-white rounded-lg shadow-modal w-full animate-slide-up', sizeClasses[size])}>
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 cursor-default"
+        aria-label="Close modal"
+        onClick={onClose}
+      />
+      <div className={cn('relative bg-white rounded-lg shadow-modal w-full animate-slide-up', sizeClasses[size])}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-200">
           <h2 className="text-lg font-semibold text-surface-900 tracking-tight">{title}</h2>
           <button

@@ -134,7 +134,7 @@ export interface NotificationServiceInterface {
 }
 
 export class NotificationService implements NotificationServiceInterface {
-  constructor(private emailTransport: EmailTransport) {}
+  constructor(private readonly emailTransport: EmailTransport) {}
 
   async sendEmail(to: string, subject: string, body: string) {
     try {

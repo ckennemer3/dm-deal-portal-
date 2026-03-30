@@ -22,8 +22,9 @@ function ToastNotification({ notification, onDismiss }: ToastNotificationProps) 
   }, [onDismiss]);
 
   return (
-    <div
-      className="bg-white border border-surface-200 rounded-lg shadow-lg p-4 max-w-sm w-full animate-slide-up cursor-pointer hover:shadow-xl transition-shadow"
+    <button
+      type="button"
+      className="bg-white border border-surface-200 rounded-lg shadow-lg p-4 max-w-sm w-full animate-slide-up cursor-pointer hover:shadow-xl transition-shadow text-left"
       onClick={() => {
         if (notification.deal_id) {
           router.push(`/dashboard/deals/${notification.deal_id}`);
@@ -56,7 +57,7 @@ function ToastNotification({ notification, onDismiss }: ToastNotificationProps) 
           </svg>
         </button>
       </div>
-    </div>
+    </button>
   );
 }
 

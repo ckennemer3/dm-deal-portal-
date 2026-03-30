@@ -134,16 +134,7 @@ export function canDeleteDocuments(user: User, deal: Deal): boolean {
 }
 
 export function canReplaceDocuments(user: User, deal: Deal): boolean {
-  switch (user.role) {
-    case 'agent':
-      return deal.submitted_by === user.id;
-    case 'manager':
-    case 'general_manager':
-    case 'administrator':
-      return true;
-    default:
-      return false;
-  }
+  return canDeleteDocuments(user, deal);
 }
 
 // === Communication Rules ===
