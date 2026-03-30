@@ -65,14 +65,14 @@ export function StepDocuments({ formData, pendingFiles, onFileSelect, onFileRemo
         <Card padding="md">
           <h3 className="font-medium text-surface-900 mb-4">Alternate Credit Bureau Documents</h3>
           <div className="space-y-4">
-            {formData.applicants.map((app, i) =>
+            {formData.applicants.map((app, idx) =>
               app.has_alternate_bureau ? (
                 <FileUpload
-                  key={`alt_bureau_${i}`}
+                  key={`alt_bureau_${app.first_name}-${app.last_name}`}
                   label={`Alternate Credit Bureau — ${app.first_name} ${app.last_name}`}
                   required
-                  currentFile={getFileInfo(`alternate_credit_bureau_${i}`)}
-                  onUpload={(file) => handleUpload(`alternate_credit_bureau_${i}`, file)}
+                  currentFile={getFileInfo(`alternate_credit_bureau_${idx}`)}
+                  onUpload={(file) => handleUpload(`alternate_credit_bureau_${idx}`, file)}
                 />
               ) : null
             )}

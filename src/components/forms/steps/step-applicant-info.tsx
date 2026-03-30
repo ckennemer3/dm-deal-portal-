@@ -19,25 +19,25 @@ export function StepApplicantInfo({ formData, updateFormData, errors }: Readonly
 
   return (
     <div className="space-y-6">
-      {formData.applicants.map((app, i) => (
-        <Card key={`applicant-${i}`} padding="md" className="space-y-4">
+      {formData.applicants.map((app, idx) => (
+        <Card key={`applicant-${app.first_name}-${app.last_name}`} padding="md" className="space-y-4">
           <h3 className="font-medium text-surface-900">
-            Applicant {i + 1} {i === 0 && '(Primary)'}
+            Applicant {idx + 1} {idx === 0 && '(Primary)'}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="First Name"
               required
               value={app.first_name}
-              onChange={(e) => updateApplicant(i, 'first_name', e.target.value)}
-              error={errors[`applicant_${i}_first_name`]}
+              onChange={(e) => updateApplicant(idx, 'first_name', e.target.value)}
+              error={errors[`applicant_${idx}_first_name`]}
             />
             <Input
               label="Last Name"
               required
               value={app.last_name}
-              onChange={(e) => updateApplicant(i, 'last_name', e.target.value)}
-              error={errors[`applicant_${i}_last_name`]}
+              onChange={(e) => updateApplicant(idx, 'last_name', e.target.value)}
+              error={errors[`applicant_${idx}_last_name`]}
             />
           </div>
         </Card>

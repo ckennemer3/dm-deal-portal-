@@ -17,7 +17,9 @@ export function StepTradeIn({ formData, updateFormData, errors }: Readonly<StepP
     updateFormData({ trade_in: { ...formData.trade_in, [field]: value } });
   };
 
-  const hasTradeInValue = formData.has_trade_in === null ? '' : formData.has_trade_in ? 'yes' : 'no';
+  let hasTradeInValue = '';
+  if (formData.has_trade_in === true) hasTradeInValue = 'yes';
+  else if (formData.has_trade_in === false) hasTradeInValue = 'no';
 
   return (
     <div className="space-y-6">

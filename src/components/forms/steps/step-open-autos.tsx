@@ -20,7 +20,9 @@ export function StepOpenAutos({ formData, updateFormData, errors }: Readonly<Ste
     updateFormData({ open_autos: updated });
   };
 
-  const hasOpenAutosValue = formData.has_open_autos === null ? '' : formData.has_open_autos ? 'yes' : 'no';
+  let hasOpenAutosValue = '';
+  if (formData.has_open_autos === true) hasOpenAutosValue = 'yes';
+  else if (formData.has_open_autos === false) hasOpenAutosValue = 'no';
 
   return (
     <div className="space-y-6">
@@ -47,20 +49,20 @@ export function StepOpenAutos({ formData, updateFormData, errors }: Readonly<Ste
             className="max-w-[200px]"
           />
 
-          {formData.open_autos.map((auto, i) => (
-            <Card key={`open-auto-${i}`} padding="md" className="space-y-4">
-              <h4 className="font-medium text-surface-900">Open Auto {i + 1}</h4>
+          {formData.open_autos.map((auto, idx) => (
+            <Card key={`open-auto-${auto.lienholder || idx}`} padding="md" className="space-y-4">
+              <h4 className="font-medium text-surface-900">Open Auto {idx + 1}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Lienholder" required value={auto.lienholder}
-                  onChange={(e) => updateAuto(i, 'lienholder', e.target.value)}
-                  error={errors[`auto_${i}_lienholder`]} />
+                  onChange={(e) => updateAuto(idx, 'lienholder', e.target.value)}
+                  error={errors[`auto_${idx}_lienholder`]} />
                 <CurrencyInput label="Monthly Payment" required value={auto.monthly_payment}
-                  onChange={(v) => updateAuto(i, 'monthly_payment', v)}
-                  error={errors[`auto_${i}_payment`]} />
+                  onChange={(v) => updateAuto(idx, 'monthly_payment', v)}
+                  error={errors[`auto_${idx}_payment`]} />
               </div>
               <Input label="Who Drives This Vehicle" required value={auto.who_drives}
-                onChange={(e) => updateAuto(i, 'who_drives', e.target.value)}
-                error={errors[`auto_${i}_who_drives`]} />
+                onChange={(e) => updateAuto(idx, 'who_drives', e.target.value)}
+                error={errors[`auto_${idx}_who_drives`]} />
             </Card>
           ))}
         </div>

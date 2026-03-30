@@ -12,7 +12,10 @@ export function downloadCSV(data: Record<string, unknown>[], filename: string) {
     ...data.map(row =>
       headers.map(h => {
         const val = row[h];
-        const str = val == null ? '' : (typeof val === 'object' ? JSON.stringify(val) : String(val));
+        let str = '';
+        if (val != null) {
+          str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+        }
         // Escape commas and quotes
         return str.includes(',') || str.includes('"') || str.includes('\n')
           ? `"${str.replaceAll('"', '""')}"`

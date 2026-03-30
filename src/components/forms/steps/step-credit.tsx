@@ -20,9 +20,9 @@ export function StepCredit({ formData, updateFormData, errors }: Readonly<StepPr
     updateFormData({ applicants: updated });
   };
 
-  const derogatoryValue = formData.has_derogatory_credit === null
-    ? ''
-    : formData.has_derogatory_credit ? 'yes' : 'no';
+  let derogatoryValue = '';
+  if (formData.has_derogatory_credit === true) derogatoryValue = 'yes';
+  else if (formData.has_derogatory_credit === false) derogatoryValue = 'no';
 
   return (
     <div className="space-y-6">
@@ -41,19 +41,19 @@ export function StepCredit({ formData, updateFormData, errors }: Readonly<StepPr
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-100">
-              {formData.applicants.map((app, i) => (
-                <tr key={`credit-${i}`}>
+              {formData.applicants.map((app, idx) => (
+                <tr key={`credit-${app.first_name}-${app.last_name}`}>
                   <td className="py-3 pr-4">
                     <span className="text-sm text-surface-900">
-                      {app.first_name || 'Applicant'} {app.last_name || (i + 1)}
+                      {app.first_name || 'Applicant'} {app.last_name || (idx + 1)}
                     </span>
                   </td>
                   <td className="py-3 pr-4">
                     <Input
                       type="number"
                       value={app.experian_score}
-                      onChange={(e) => updateApplicant(i, 'experian_score', e.target.value)}
-                      error={errors[`applicant_${i}_score`]}
+                      onChange={(e) => updateApplicant(idx, 'experian_score', e.target.value)}
+                      error={errors[`applicant_${idx}_score`]}
                       placeholder="Score"
                       className="max-w-[120px]"
                     />
@@ -62,7 +62,7 @@ export function StepCredit({ formData, updateFormData, errors }: Readonly<StepPr
                     <input
                       type="checkbox"
                       checked={app.has_alternate_bureau}
-                      onChange={(e) => updateApplicant(i, 'has_alternate_bureau', e.target.checked)}
+                      onChange={(e) => updateApplicant(idx, 'has_alternate_bureau', e.target.checked)}
                       className="w-4 h-4 rounded border-surface-300 text-brand-600 focus:ring-brand-500"
                     />
                   </td>
@@ -74,7 +74,7 @@ export function StepCredit({ formData, updateFormData, errors }: Readonly<StepPr
                           { value: 'transunion', label: 'TransUnion' },
                         ]}
                         value={app.alternate_bureau}
-                        onChange={(e) => updateApplicant(i, 'alternate_bureau', e.target.value)}
+                        onChange={(e) => updateApplicant(idx, 'alternate_bureau', e.target.value)}
                         placeholder="Select"
                         className="max-w-[150px]"
                       />
@@ -85,7 +85,7 @@ export function StepCredit({ formData, updateFormData, errors }: Readonly<StepPr
                       <Input
                         type="number"
                         value={app.alternate_score}
-                        onChange={(e) => updateApplicant(i, 'alternate_score', e.target.value)}
+                        onChange={(e) => updateApplicant(idx, 'alternate_score', e.target.value)}
                         placeholder="Score"
                         className="max-w-[120px]"
                       />

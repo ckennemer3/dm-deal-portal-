@@ -169,8 +169,8 @@ export function SortableTable<T extends Record<string, any>>({
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100">
-            {sortedData.map((row, i) => (
-              <tr key={`row-${i}`} className={cn(i % 2 === 1 && 'bg-surface-25', 'hover:bg-surface-50 transition-colors')}>
+            {sortedData.map((row, idx) => (
+              <tr key={`row-${String(row[columns[0]?.key] ?? idx)}`} className={cn(idx % 2 === 1 && 'bg-surface-25', 'hover:bg-surface-50 transition-colors')}>
                 {columns.map(col => {
                   const val = row[col.key];
                   const display = col.format ? col.format(val) : String(val ?? '—');
