@@ -13,16 +13,16 @@ interface RoleSwitcherContextType {
 const RoleSwitcherContext = createContext<RoleSwitcherContextType | undefined>(undefined);
 
 export function RoleSwitcherProvider({ children, actualRole }: Readonly<{ children: ReactNode; actualRole: UserRole }>) {
-  const [viewAsRole, setViewAsRoleState] = useState<UserRole | null>(null);
+  const [viewAsRole, setViewAsRole] = useState<UserRole | null>(null);
 
-  const setViewAsRole = (role: UserRole | null) => {
-    setViewAsRoleState(role === actualRole ? null : role);
+  const handleSetViewAsRole = (role: UserRole | null) => {
+    setViewAsRole(role === actualRole ? null : role);
   };
 
   const contextValue = useMemo(() => ({
     effectiveRole: viewAsRole ?? actualRole,
     isViewingAs: viewAsRole !== null && viewAsRole !== actualRole,
-    setViewAsRole,
+    setViewAsRole: handleSetViewAsRole,
     actualRole,
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [viewAsRole, actualRole]);

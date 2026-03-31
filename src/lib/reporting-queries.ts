@@ -315,7 +315,7 @@ export function computeOverviewKPIs(deals: any[], statusHistory: any[]): Overvie
     completed: completed.length,
     cancelled: cancelled.length,
     avgDaysToCompletion,
-    firstTimeApprovalRate: firstTimeApprovalRate !== null ? +firstTimeApprovalRate.toFixed(1) : null,
+    firstTimeApprovalRate: firstTimeApprovalRate === null ? null : +firstTimeApprovalRate.toFixed(1),
     kickbackRate: +kickbackRate.toFixed(1),
   };
 }

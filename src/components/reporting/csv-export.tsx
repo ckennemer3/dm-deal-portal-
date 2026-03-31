@@ -14,7 +14,7 @@ export function downloadCSV(data: Record<string, unknown>[], filename: string) {
         const val = row[h];
         let str = '';
         if (val != null) {
-          str = typeof val === 'object' ? JSON.stringify(val) : String(val);
+          str = (typeof val === 'object' && val !== null) ? JSON.stringify(val) : String(val);
         }
         // Escape commas and quotes
         return str.includes(',') || str.includes('"') || str.includes('\n')
