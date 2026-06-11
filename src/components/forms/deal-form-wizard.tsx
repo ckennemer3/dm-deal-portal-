@@ -3,8 +3,8 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { UserWithRelations, DealFormData } from '@/lib/types';
-import { FORM_STEPS } from '@/lib/constants';
+import { UserWithRelations, DealFormData, DocumentType } from '@/lib/types';
+import { FORM_STEPS, DOCUMENT_TYPE_LABELS } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { StepDealSetup } from './steps/step-deal-setup';
 import { StepApplicantInfo } from './steps/step-applicant-info';
@@ -200,6 +200,7 @@ export function DealFormWizard({ user }: Readonly<DealFormWizardProps>) {
 
       // Phase 2: Upload all pending documents to the new deal
       const filesToUpload = Array.from(pendingFiles.entries());
+      const failedUploads: string[] = [];
       if (filesToUpload.length > 0) {
         setUploadProgress({ current: 0, total: filesToUpload.length });
 
@@ -207,20 +208,37 @@ export function DealFormWizard({ user }: Readonly<DealFormWizardProps>) {
           const [docType, file] = filesToUpload[i];
           setUploadProgress({ current: i + 1, total: filesToUpload.length });
 
+          // Per-applicant alternate bureau files are keyed "alternate_credit_bureau_{idx}"
+          // in pendingFiles — the DB document_type must be the bare value.
+          const dbDocType = docType.startsWith('alternate_credit_bureau')
+            ? 'alternate_credit_bureau'
+            : docType;
+
           try {
             const fd = new FormData();
             fd.append('file', file);
             if (docType === 'other' && otherDocLabel.trim()) {
               fd.append('customLabel', otherDocLabel.trim());
             }
-            const uploadResult = await uploadDocument(dealId, docType, null, fd);
+            const uploadResult = await uploadDocument(dealId, dbDocType, null, fd);
             if (!uploadResult.success) {
               console.error(`Failed to upload ${docType}:`, uploadResult.error);
+              failedUploads.push(DOCUMENT_TYPE_LABELS[dbDocType as DocumentType] || dbDocType);
             }
           } catch (uploadErr) {
             console.error(`Failed to upload ${docType}:`, uploadErr);
+            failedUploads.push(DOCUMENT_TYPE_LABELS[dbDocType as DocumentType] || dbDocType);
           }
         }
+      }
+
+      // No silent failures: the deal exists, but the user must know which
+      // documents still need to be re-uploaded from the deal page.
+      if (failedUploads.length > 0) {
+        window.alert(
+          `Your deal was submitted, but ${failedUploads.length} document(s) failed to upload:\n\n` +
+          `${failedUploads.join('\n')}\n\nPlease re-upload them from the deal page.`
+        );
       }
 
       router.push(`/dashboard/deals/${dealId}?submitted=true`);
