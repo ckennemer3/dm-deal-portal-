@@ -45,5 +45,11 @@ export default async function DashboardLayout({
     redirect('/auth/login');
   }
 
+  // Deactivated accounts must not access the portal — sign out and bounce.
+  if (!userProfile.is_active) {
+    await supabase.auth.signOut();
+    redirect('/auth/login?error=account_disabled');
+  }
+
   return <DashboardShell user={userProfile}>{children}</DashboardShell>;
 }

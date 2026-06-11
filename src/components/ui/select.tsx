@@ -1,4 +1,4 @@
-import { forwardRef, SelectHTMLAttributes } from 'react';
+import { forwardRef, SelectHTMLAttributes, useId } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
@@ -10,7 +10,10 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ className, label, error, options, placeholder, id, ...props }, ref) => {
-    const selectId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
+    // useId guarantees uniqueness — label-derived ids collide when the same
+    // label appears multiple times on a page.
+    const autoId = useId();
+    const selectId = id || autoId;
     return (
       <div className="w-full">
         {label && (

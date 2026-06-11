@@ -50,7 +50,7 @@ export function StepOpenAutos({ formData, updateFormData, errors }: Readonly<Ste
           />
 
           {formData.open_autos.map((auto, idx) => (
-            <Card key={`open-auto-${auto.lienholder || idx}`} padding="md" className="space-y-4">
+            <Card key={`open-auto-${idx}`} padding="md" className="space-y-4">
               <h4 className="font-medium text-surface-900">Open Auto {idx + 1}</h4>
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Lienholder" required value={auto.lienholder}

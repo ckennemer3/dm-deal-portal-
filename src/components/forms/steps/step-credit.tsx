@@ -42,7 +42,7 @@ export function StepCredit({ formData, updateFormData, errors }: Readonly<StepPr
             </thead>
             <tbody className="divide-y divide-surface-100">
               {formData.applicants.map((app, idx) => (
-                <tr key={`credit-${app.first_name}-${app.last_name}`}>
+                <tr key={`credit-${idx}`}>
                   <td className="py-3 pr-4">
                     <span className="text-sm text-surface-900">
                       {app.first_name || 'Applicant'} {app.last_name || (idx + 1)}

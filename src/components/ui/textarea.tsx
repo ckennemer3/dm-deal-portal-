@@ -1,4 +1,4 @@
-import { forwardRef, TextareaHTMLAttributes } from 'react';
+import { forwardRef, TextareaHTMLAttributes, useId } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -8,7 +8,10 @@ export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElemen
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, id, ...props }, ref) => {
-    const textareaId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
+    // useId guarantees uniqueness — label-derived ids collide when the same
+    // label appears multiple times on a page.
+    const autoId = useId();
+    const textareaId = id || autoId;
     return (
       <div className="w-full">
         {label && (

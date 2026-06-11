@@ -412,7 +412,9 @@ export async function respondToKickback(kickbackReasonId: string, responseText: 
 
   if (fetchError || !kickback) throw new Error('Kickback reason not found');
 
-  const { error } = await supabase
+  // .select() so an RLS-filtered (0-row) update is detected instead of
+  // silently succeeding — see migration 012.
+  const { data: updatedRows, error } = await supabase
     .from('kickback_reasons')
     .update({
       response_text: responseText.trim(),
@@ -421,9 +423,13 @@ export async function respondToKickback(kickbackReasonId: string, responseText: 
       is_resolved: true,
       resolved_at: now,
     })
-    .eq('id', kickbackReasonId);
+    .eq('id', kickbackReasonId)
+    .select('id');
 
   if (error) throw new Error(error.message);
+  if (!updatedRows || updatedRows.length === 0) {
+    throw new Error('Failed to save kickback response — no rows updated');
+  }
 
   await logAuditEvent({
     dealId: kickback.deal_id,

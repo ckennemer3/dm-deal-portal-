@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -28,6 +28,21 @@ export default function LoginPage() {
       if (authError) {
         setError(authError.message);
         return;
+      }
+
+      // Block deactivated accounts (server-enforced again in dashboard layout)
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('is_active')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile && profile.is_active === false) {
+          await supabase.auth.signOut();
+          setError('Your account has been deactivated. Please contact an administrator.');
+          return;
+        }
       }
 
       router.push('/dashboard');

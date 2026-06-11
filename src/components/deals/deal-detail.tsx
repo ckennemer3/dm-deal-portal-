@@ -12,7 +12,7 @@ import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { formatCurrency, formatTimestamp, formatPercentage, calculateLTV, getLTVColor, getFullName } from '@/lib/utils';
-import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments } from '@/lib/permissions';
+import { canEditDealFields, canApproveAndForward, canKickBackToManager, canKickBackToSales, canClaimDeal, canSendMessage, canSendActionRequired, canUploadDocuments, canDeleteDocuments, canTransitionStatus } from '@/lib/permissions';
 import { updateDealStatus, claimDeal, reassignDeal, sendMessage, updateDealField, respondToKickback } from '@/app/dashboard/deals/[id]/actions';
 import { uploadDocument, deleteDocument, getDocumentSignedUrl } from '@/app/dashboard/deals/actions-documents';
 import { CommunicationThread } from './communication-thread';
@@ -350,6 +350,14 @@ function useDealActions(deal: any, router: ReturnType<typeof useRouter>) {
     } finally { setLoading(false); }
   };
 
+  const handleCancelDeal = async (reason: string) => {
+    setLoading(true);
+    try {
+      await updateDealStatus(deal.id, 'cancelled', reason);
+      router.refresh();
+    } finally { setLoading(false); }
+  };
+
   const handleResubmit = async () => {
     setLoading(true);
     try {
@@ -374,7 +382,7 @@ function useDealActions(deal: any, router: ReturnType<typeof useRouter>) {
     } finally { setLoading(false); }
   };
 
-  return { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleResubmit, handleSubmitToLender, handleMarkApproved };
+  return { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleCancelDeal, handleResubmit, handleSubmitToLender, handleMarkApproved };
 }
 
 /**
@@ -523,7 +531,9 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
   const [submittingKickbackResponse, setSubmittingKickbackResponse] = useState(false);
 
   // Extracted action and document handlers
-  const { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleResubmit, handleSubmitToLender, handleMarkApproved } = useDealActions(deal, router);
+  const { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleCancelDeal, handleResubmit, handleSubmitToLender, handleMarkApproved } = useDealActions(deal, router);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
   const { uploadingDoc, uploadDocType, setUploadDocType, customDocLabel, setCustomDocLabel, uploadError, handleDocumentUpload, handleDocumentView, handleDocumentDownload, handleDocumentDelete } = useDealDocuments(deal.id, router);
   const { showKickbackModal, setShowKickbackModal, kickbackMessage, setKickbackMessage, kickbackReason, setKickbackReason, handleKickback } = useKickbackModal(deal, user.role, setLoading, router);
 
@@ -733,6 +743,11 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
           {user.role === 'agent' && deal.status === 'kicked_back_to_sales' && (
             <Button onClick={handleResubmit} loading={loading}>Resubmit to Manager</Button>
           )}
+
+          {/* Cancel deal — any role allowed by STATUS_TRANSITIONS for this status */}
+          {canTransitionStatus(user.role, deal.status, 'cancelled') && (
+            <Button variant="ghost" onClick={() => setShowCancelModal(true)}>Cancel Deal</Button>
+          )}
         </div>
       </div>
 
@@ -848,18 +863,23 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
             })()}
           </Card>
 
-          {/* Trade-In */}
-          {deal.has_trade_in && deal.trade_in?.[0] && (
-            <Card padding="md">
-              <CardHeader title="Trade-In Vehicle" />
-              <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-surface-500">Vehicle:</span> <span className="font-medium ml-2">{deal.trade_in[0].year} {deal.trade_in[0].make} {deal.trade_in[0].model}</span></div>
-                <div><span className="text-surface-500">Payment:</span> <span className="font-medium ml-2">{formatCurrency(deal.trade_in[0].monthly_payment)}</span></div>
-                <div><span className="text-surface-500">Lienholder:</span> <span className="font-medium ml-2">{deal.trade_in[0].lienholder}</span></div>
-                <div><span className="text-surface-500">Driver:</span> <span className="font-medium ml-2">{deal.trade_in[0].who_drives}</span></div>
-              </div>
-            </Card>
-          )}
+          {/* Trade-In — PostgREST returns a single object for this one-to-one
+              embed (deal_trade_ins.deal_id is UNIQUE), not an array. Handle both. */}
+          {(() => {
+            const tradeIn = Array.isArray(deal.trade_in) ? deal.trade_in[0] : deal.trade_in;
+            if (!deal.has_trade_in || !tradeIn) return null;
+            return (
+              <Card padding="md">
+                <CardHeader title="Trade-In Vehicle" />
+                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                  <div><span className="text-surface-500">Vehicle:</span> <span className="font-medium ml-2">{tradeIn.year} {tradeIn.make} {tradeIn.model}</span></div>
+                  <div><span className="text-surface-500">Payment:</span> <span className="font-medium ml-2">{formatCurrency(tradeIn.monthly_payment)}</span></div>
+                  <div><span className="text-surface-500">Lienholder:</span> <span className="font-medium ml-2">{tradeIn.lienholder}</span></div>
+                  <div><span className="text-surface-500">Driver:</span> <span className="font-medium ml-2">{tradeIn.who_drives}</span></div>
+                </div>
+              </Card>
+            );
+          })()}
 
           {/* Open Autos */}
           {deal.has_open_autos && deal.open_autos?.length > 0 && (
@@ -1077,6 +1097,40 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
           </div>
         );
       })()}
+
+      {/* Cancel Deal Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => { setShowCancelModal(false); setCancelReason(''); }}
+        title="Cancel Deal"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { setShowCancelModal(false); setCancelReason(''); }}>Keep Deal</Button>
+            <Button
+              variant="danger"
+              loading={loading}
+              disabled={!cancelReason.trim()}
+              onClick={async () => { await handleCancelDeal(cancelReason.trim()); setShowCancelModal(false); setCancelReason(''); }}
+            >
+              Cancel Deal
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-surface-600">
+            Cancelling is permanent — the deal is closed and removed from all active queues.
+          </p>
+          <Textarea
+            label="Reason for cancelling"
+            required
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            placeholder="e.g. Client walked, switched vehicles, financing fell through..."
+            rows={3}
+          />
+        </div>
+      </Modal>
 
       {/* Kickback Modal */}
       <Modal

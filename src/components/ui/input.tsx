@@ -1,4 +1,4 @@
-import { forwardRef, InputHTMLAttributes } from 'react';
+import { forwardRef, InputHTMLAttributes, useId } from 'react';
 import { cn } from '@/lib/utils';
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -9,7 +9,10 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, hint, id, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
+    // useId guarantees uniqueness — label-derived ids collide when the same
+    // label appears multiple times (e.g. First Name for applicants 1-3).
+    const autoId = useId();
+    const inputId = id || autoId;
     return (
       <div className="w-full">
         {label && (

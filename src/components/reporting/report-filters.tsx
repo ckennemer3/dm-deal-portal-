@@ -86,8 +86,8 @@ export function ReportFilters({ filterOptions, effectiveRole }: Readonly<ReportF
     <div className="space-y-2">
       {/* Primary row: date presets + filter toggle + active count */}
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Date preset pills */}
-        <div className="flex items-center gap-1">
+        {/* Date preset pills — wrap on narrow screens to avoid page overflow */}
+        <div className="flex items-center gap-1 flex-wrap">
           {DATE_PRESETS.map(p => (
             <button
               key={p.value}

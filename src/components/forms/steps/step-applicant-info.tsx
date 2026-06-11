@@ -19,8 +19,10 @@ export function StepApplicantInfo({ formData, updateFormData, errors }: Readonly
 
   return (
     <div className="space-y-6">
+      {/* Index keys: name-derived keys collide while fields are empty and
+          force a remount (focus loss) on every keystroke. */}
       {formData.applicants.map((app, idx) => (
-        <Card key={`applicant-${app.first_name}-${app.last_name}`} padding="md" className="space-y-4">
+        <Card key={`applicant-${idx}`} padding="md" className="space-y-4">
           <h3 className="font-medium text-surface-900">
             Applicant {idx + 1} {idx === 0 && '(Primary)'}
           </h3>

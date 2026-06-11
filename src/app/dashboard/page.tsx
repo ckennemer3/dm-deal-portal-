@@ -453,19 +453,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity — placeholder link to future activity page */}
-      <div className="flex justify-center">
-        <Link
-          href="/dashboard/activity"
-          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-surface-600 bg-white border border-surface-200 rounded-lg hover:bg-surface-50 hover:border-surface-300 transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          View Recent Activity
-        </Link>
-      </div>
-
       {/* Role badge footer */}
       <div className="flex items-center justify-center py-4">
         <span className="text-xs text-surface-400">

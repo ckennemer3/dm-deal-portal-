@@ -57,7 +57,13 @@ dm-deal-portal/
 │       ├── 004_fix_corrupted_office_ids.sql
 │       ├── 005_fix_offices_and_seed_teams.sql
 │       ├── 006_add_kicked_back_to_manager_status.sql
-│       └── 007_add_kickback_tracking.sql
+│       ├── 007_add_kickback_tracking.sql
+│       ├── 008_enhancements.sql         # deal_views, audit_log, notifications, kickback_reasons, reporting views
+│       ├── 009_kickback_response_tracking.sql
+│       ├── 010_real_team_names.sql
+│       ├── 011_add_general_manager_role.sql
+│       ├── 012_fix_kickback_response_rls.sql   # UPDATE policy so kickback responses save
+│       └── 013_user_directory_visibility.sql   # All authed users can read the user directory (name resolution)
 │
 ├── src/
 │   ├── middleware.ts                    # Next.js middleware — session refresh on all routes
