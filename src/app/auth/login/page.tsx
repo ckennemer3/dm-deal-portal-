@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Surface errors passed back from /auth/callback (e.g. expired reset links)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'auth_failed') {
+      setError('That sign-in link was invalid or has expired. Please try again.');
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +81,15 @@ export default function LoginPage() {
               required
               autoComplete="current-password"
             />
+
+            <div className="flex justify-end -mt-2">
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm text-brand-600 hover:text-brand-700 font-medium"
+              >
+                Forgot password?
+              </Link>
+            </div>
 
             {error && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200">

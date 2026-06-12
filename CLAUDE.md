@@ -31,7 +31,7 @@ Before making any change:
 
 | Layer        | Technology                  | Version   |
 | ------------ | --------------------------- | --------- |
-| Framework    | Next.js (App Router)        | 14.2.15   |
+| Framework    | Next.js (App Router)        | 14.2.35   |
 | UI           | React                       | 18.3.1    |
 | Language     | TypeScript (strict mode)    | 5.x       |
 | Styling      | Tailwind CSS                | 3.4.1     |
@@ -39,7 +39,7 @@ Before making any change:
 | SSR Auth     | @supabase/ssr               | 0.5.0     |
 | Validation   | Zod                         | 4.3.6     |
 | Testing      | Vitest                      | 4.0.18    |
-| Utilities    | clsx, tailwind-merge, date-fns, uuid | — |
+| Utilities    | clsx, tailwind-merge, date-fns | — |
 | Deployment   | Vercel (via GitHub)         | —         |
 
 ---
@@ -72,6 +72,8 @@ dm-deal-portal/
 │   │   │
 │   │   ├── auth/
 │   │   │   ├── login/page.tsx          # Login page
+│   │   │   ├── forgot-password/page.tsx # Request password reset email
+│   │   │   ├── reset-password/page.tsx  # Set new password (arrives via email link)
 │   │   │   └── callback/route.ts       # OAuth callback handler
 │   │   │
 │   │   └── dashboard/
@@ -94,6 +96,10 @@ dm-deal-portal/
 │   │       │       ├── page.tsx        # New deal submission
 │   │       │       ├── actions.ts      # Server action to create deal
 │   │       │       └── loading.tsx
+│   │       │
+│   │       ├── activity/
+│   │       │   ├── page.tsx            # Recent activity feed (audit_log entries)
+│   │       │   └── loading.tsx
 │   │       │
 │   │       ├── admin/
 │   │       │   ├── page.tsx            # Admin panel (users, teams)
@@ -667,7 +673,7 @@ npm run dev      # Start dev server (localhost:3000)
 npm run build    # Production build (Next.js)
 npm run start    # Start production server
 npm run lint     # Run ESLint
-npx vitest       # Run tests (no npm test script defined)
+npm test         # Run tests once (vitest run)
 npx vitest --coverage  # Run tests with coverage
 ```
 
@@ -742,7 +748,7 @@ npx vitest --coverage  # Run tests with coverage
 
 1. **DatabaseService underused** — `src/services/database.ts` provides generic query helpers, but most code queries Supabase directly in server components. Consider either removing the service or migrating inline queries to use it (recommended for Azure migration).
 
-2. **No `npm test` script** — Vitest is configured but `package.json` has no `test` script. Run tests with `npx vitest`.
+2. **`npm test` script** — Runs `vitest run` (single pass). Use `npx vitest` for watch mode.
 
 3. **Manual types** — Types in `src/lib/types.ts` are maintained manually. No Supabase type generation (`supabase gen types`). Types may drift from actual schema.
 

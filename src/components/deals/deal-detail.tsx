@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserWithRelations, KickbackReason, AuditActionType, DocumentType } from '@/lib/types';
-import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
+import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, AUDIT_ACTION_COLORS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/ui/badge';
@@ -77,34 +77,6 @@ function formatFieldValue(fieldName: string, value: string | number | null | und
   return strVal;
 }
 
-/** Color dot for Deal History entries based on action type */
-function getActionColor(actionType: string): string {
-  switch (actionType) {
-    case 'status_changed':
-    case 'deal_resubmitted':
-      return 'bg-brand-400';
-    case 'deal_kicked_back':
-      return 'bg-orange-400';
-    case 'deal_claimed':
-    case 'deal_reassigned':
-      return 'bg-purple-400';
-    case 'document_uploaded':
-    case 'document_replaced':
-      return 'bg-emerald-400';
-    case 'document_deleted':
-      return 'bg-red-400';
-    case 'message_sent':
-    case 'action_required_resolved':
-      return 'bg-sky-400';
-    case 'field_changed':
-      return 'bg-amber-400';
-    case 'kickback_responded':
-      return 'bg-orange-400';
-    default:
-      return 'bg-surface-400';
-  }
-}
-
 /** Merged Deal History section — replaces old Deal History + Audit Log */
 function DealHistory({ entries }: Readonly<{ entries: any[] }>) {
   const [showAll, setShowAll] = useState(false);
@@ -128,7 +100,7 @@ function DealHistory({ entries }: Readonly<{ entries: any[] }>) {
 
               return (
                 <div key={entry.id} className="flex items-start gap-3 py-1.5 border-b border-surface-50 last:border-0">
-                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${getActionColor(entry.action_type)}`} />
+                  <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${AUDIT_ACTION_COLORS[entry.action_type as AuditActionType] || 'bg-surface-400'}`} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-medium text-surface-700">{userName}</span>
