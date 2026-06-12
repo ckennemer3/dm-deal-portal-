@@ -1,13 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export default function LoginPage() {
+const LOGIN_REDIRECT_ERRORS: Record<string, string> = {
+  account_disabled: 'Your account has been deactivated. Please contact an administrator.',
+};
+
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Surface the reason the dashboard bounced the user here (e.g. deactivated).
+  const redirectError = LOGIN_REDIRECT_ERRORS[searchParams.get('error') ?? ''] ?? '';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -88,9 +95,9 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
 
-            {error && (
+            {(error || redirectError) && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200">
-                <p className="text-sm text-red-700">{error}</p>
+                <p className="text-sm text-red-700">{error || redirectError}</p>
               </div>
             )}
 
@@ -109,5 +116,14 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  // useSearchParams requires a Suspense boundary in the App Router.
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }

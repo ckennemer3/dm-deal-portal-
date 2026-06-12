@@ -233,12 +233,16 @@ export function DealFormWizard({ user }: Readonly<DealFormWizardProps>) {
       }
 
       // No silent failures: the deal exists, but the user must know which
-      // documents still need to be re-uploaded from the deal page.
+      // documents still need re-uploading. Use an inline banner (not
+      // window.alert, which mobile webviews can suppress) and carry the
+      // notice to the deal page so it survives navigation.
       if (failedUploads.length > 0) {
-        window.alert(
-          `Your deal was submitted, but ${failedUploads.length} document(s) failed to upload:\n\n` +
-          `${failedUploads.join('\n')}\n\nPlease re-upload them from the deal page.`
-        );
+        const params = new URLSearchParams({
+          submitted: 'true',
+          uploadFailed: Array.from(new Set(failedUploads)).join(','),
+        });
+        router.push(`/dashboard/deals/${dealId}?${params.toString()}`);
+        return;
       }
 
       router.push(`/dashboard/deals/${dealId}?submitted=true`);

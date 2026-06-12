@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, forwardRef, InputHTMLAttributes, useCallback } from 'react';
+import { useState, forwardRef, InputHTMLAttributes, useCallback, useId } from 'react';
 import { cn, parseCurrencyInput } from '@/lib/utils';
 
 interface CurrencyInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
@@ -12,7 +12,10 @@ interface CurrencyInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>,
 
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ label, error, value, onChange, id, className, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replaceAll(/\s+/g, '-');
+    // useId avoids duplicate ids when the same label repeats on a page
+    // (e.g. per-applicant / per-open-auto monetary fields).
+    const autoId = useId();
+    const inputId = id || autoId;
     const [displayValue, setDisplayValue] = useState(value);
 
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

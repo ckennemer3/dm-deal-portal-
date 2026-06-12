@@ -46,7 +46,8 @@ export default async function DashboardLayout({
   }
 
   // Deactivated accounts must not access the portal — sign out and bounce.
-  if (!userProfile.is_active) {
+  // Explicit === false so a missing/null is_active never locks out a valid user.
+  if (userProfile.is_active === false) {
     await supabase.auth.signOut();
     redirect('/auth/login?error=account_disabled');
   }

@@ -102,7 +102,7 @@ export const OFFICES = [
 // === Status Transitions (who can make which transitions) ===
 export const STATUS_TRANSITIONS: Record<DealStatus, { next: DealStatus[]; roles: UserRole[] }> = {
   pending: {
-    next: ['pending_manager_review'],
+    next: ['pending_manager_review', 'cancelled'],
     roles: ['agent', 'administrator'],
   },
   pending_manager_review: {

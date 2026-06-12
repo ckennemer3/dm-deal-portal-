@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { UserWithRelations, KickbackReason, AuditActionType, DocumentType } from '@/lib/types';
 import { DEAL_TYPE_LABELS, VEHICLE_CONDITION_LABELS, DOCUMENT_TYPE_LABELS, KICKBACK_REASON_LABELS, AUDIT_ACTION_LABELS, MANAGER_RESPONSE_TIMER_CONFIG } from '@/lib/constants';
 import { Card, CardHeader } from '@/components/ui/card';
@@ -529,11 +529,19 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
   // Kickback banner state
   const [kickbackResponseText, setKickbackResponseText] = useState('');
   const [submittingKickbackResponse, setSubmittingKickbackResponse] = useState(false);
+  const [kickbackResponseError, setKickbackResponseError] = useState('');
 
   // Extracted action and document handlers
   const { loading, setLoading, handleApproveForward, handleClaim, handleComplete, handleCancelDeal, handleResubmit, handleSubmitToLender, handleMarkApproved } = useDealActions(deal, router);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+
+  // Documents that failed to upload during submission (passed via query param
+  // from the wizard) — shown as a dismissible banner so the user can re-upload.
+  const searchParams = useSearchParams();
+  const failedUploadDocs = (searchParams.get('uploadFailed') || '').split(',').map(s => s.trim()).filter(Boolean);
+  const [showUploadFailedBanner, setShowUploadFailedBanner] = useState(true);
   const { uploadingDoc, uploadDocType, setUploadDocType, customDocLabel, setCustomDocLabel, uploadError, handleDocumentUpload, handleDocumentView, handleDocumentDownload, handleDocumentDelete } = useDealDocuments(deal.id, router);
   const { showKickbackModal, setShowKickbackModal, kickbackMessage, setKickbackMessage, kickbackReason, setKickbackReason, handleKickback } = useKickbackModal(deal, user.role, setLoading, router);
 
@@ -560,10 +568,15 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
   const handleKickbackResponse = async () => {
     if (!latestKickback || !kickbackResponseText.trim()) return;
     setSubmittingKickbackResponse(true);
+    setKickbackResponseError('');
     try {
       await respondToKickback(latestKickback.id, kickbackResponseText);
       setKickbackResponseText('');
       router.refresh();
+    } catch (err: any) {
+      // respondToKickback throws if the RLS-filtered update affected 0 rows
+      // (see migration 012) — surface it instead of failing silently.
+      setKickbackResponseError(err?.message || 'Failed to save your response. Please try again.');
     } finally {
       setSubmittingKickbackResponse(false);
     }
@@ -581,6 +594,31 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
 
   return (
     <div className="space-y-6">
+      {/* Failed-upload notice carried over from the submission wizard */}
+      {failedUploadDocs.length > 0 && showUploadFailedBanner && (
+        <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-amber-900">Some documents didn&apos;t upload</h3>
+              <p className="text-sm text-amber-800 mt-1">
+                Your deal was submitted, but these document(s) failed to upload and need to be re-uploaded below:
+              </p>
+              <ul className="text-sm text-amber-800 mt-1 list-disc list-inside">
+                {failedUploadDocs.map((d) => <li key={d}>{d}</li>)}
+              </ul>
+            </div>
+            <button onClick={() => setShowUploadFailedBanner(false)} className="text-amber-500 hover:text-amber-700" title="Dismiss">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Kickback Banner — Recipient needs to respond */}
       {kickbackBannerMode === 'recipient_needs_response' && latestKickback && (
         <div className="rounded-lg border-2 border-orange-300 bg-orange-50 p-4">
@@ -609,6 +647,9 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
                   rows={3}
                   className="input-base text-sm w-full"
                 />
+                {kickbackResponseError && (
+                  <p className="mt-2 text-sm text-status-danger">{kickbackResponseError}</p>
+                )}
                 <div className="mt-2">
                   <Button
                     size="sm"
@@ -1101,16 +1142,26 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
       {/* Cancel Deal Modal */}
       <Modal
         isOpen={showCancelModal}
-        onClose={() => { setShowCancelModal(false); setCancelReason(''); }}
+        onClose={() => { setShowCancelModal(false); setCancelReason(''); setCancelError(''); }}
         title="Cancel Deal"
         footer={
           <>
-            <Button variant="secondary" onClick={() => { setShowCancelModal(false); setCancelReason(''); }}>Keep Deal</Button>
+            <Button variant="secondary" onClick={() => { setShowCancelModal(false); setCancelReason(''); setCancelError(''); }}>Keep Deal</Button>
             <Button
               variant="danger"
               loading={loading}
               disabled={!cancelReason.trim()}
-              onClick={async () => { await handleCancelDeal(cancelReason.trim()); setShowCancelModal(false); setCancelReason(''); }}
+              onClick={async () => {
+                setCancelError('');
+                try {
+                  await handleCancelDeal(cancelReason.trim());
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                } catch (err: any) {
+                  // Keep the modal open and tell the user instead of failing silently.
+                  setCancelError(err?.message || 'Failed to cancel the deal. Please try again.');
+                }
+              }}
             >
               Cancel Deal
             </Button>
@@ -1121,6 +1172,9 @@ export function DealDetail({ deal, user, underwriters, auditEntries = [], kickba
           <p className="text-sm text-surface-600">
             Cancelling is permanent — the deal is closed and removed from all active queues.
           </p>
+          {cancelError && (
+            <p className="text-sm text-status-danger">{cancelError}</p>
+          )}
           <Textarea
             label="Reason for cancelling"
             required

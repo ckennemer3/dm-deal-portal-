@@ -384,8 +384,8 @@ describe('canTransitionStatus', () => {
 // === getAvailableTransitions ===
 
 describe('getAvailableTransitions', () => {
-  it('agent gets [pending_manager_review] for pending', () => {
-    expect(getAvailableTransitions('agent', 'pending')).toEqual(['pending_manager_review']);
+  it('agent gets [pending_manager_review, cancelled] for pending', () => {
+    expect(getAvailableTransitions('agent', 'pending')).toEqual(['pending_manager_review', 'cancelled']);
   });
 
   it('manager gets [submitted_to_underwriting, kicked_back_to_sales, cancelled] for pending_manager_review', () => {
