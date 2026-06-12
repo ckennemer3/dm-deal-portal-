@@ -63,7 +63,8 @@ dm-deal-portal/
 │       ├── 010_real_team_names.sql
 │       ├── 011_add_general_manager_role.sql
 │       ├── 012_fix_kickback_response_rls.sql   # UPDATE policy so kickback responses save
-│       └── 013_user_directory_visibility.sql   # All authed users can read the user directory (name resolution)
+│       ├── 013_user_directory_visibility.sql   # All authed users can read the user directory (name resolution)
+│       └── 014_reporting_views_security_invoker.sql  # Reporting views honor RLS (no cross-role data leak via API)
 │
 ├── src/
 │   ├── middleware.ts                    # Next.js middleware — session refresh on all routes
