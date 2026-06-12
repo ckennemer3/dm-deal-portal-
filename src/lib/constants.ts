@@ -230,6 +230,22 @@ export const AUDIT_ACTION_LABELS: Record<AuditActionType, string> = {
   kickback_responded: 'Kickback Response',
 };
 
+// Color dot Tailwind classes for audit log entries (deal history + activity feed)
+export const AUDIT_ACTION_COLORS: Record<AuditActionType, string> = {
+  status_changed: 'bg-brand-400',
+  deal_resubmitted: 'bg-brand-400',
+  deal_kicked_back: 'bg-orange-400',
+  kickback_responded: 'bg-orange-400',
+  deal_claimed: 'bg-purple-400',
+  deal_reassigned: 'bg-purple-400',
+  document_uploaded: 'bg-emerald-400',
+  document_replaced: 'bg-emerald-400',
+  document_deleted: 'bg-red-400',
+  message_sent: 'bg-sky-400',
+  action_required_resolved: 'bg-sky-400',
+  field_changed: 'bg-amber-400',
+};
+
 // === Reporting Date Range Presets ===
 export const REPORTING_DATE_RANGES = [
   { value: 'today', label: 'Today' },
